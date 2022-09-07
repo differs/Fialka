@@ -14,7 +14,7 @@
 #include <unistd.h>
 #endif
 
-#define RELEASE "M-125 (05.01.2022) linux"
+#define RELEASE "M-125 v4.0 LINUX (17.01.2022)"
 
 using namespace std;
 bool should_exit = false;
@@ -216,7 +216,7 @@ int main(int argc, char** argv)
 	string seed = "";
 	string zez = "";
 	int diz = 0;
-	string outputFile = "Found.txt";
+	string outputFile = "FOUND.txt";
 
 	string inputFile = "";	// for both multiple hash160s and x points
 	string address = "";	// for single address mode

@@ -31,6 +31,7 @@ public:
 	~Secp256K1();
 	void Init();
 	Point ComputePublicKey(Int* privKey);
+
 	Point NextKey(Point& key);
 	void Check();
 	bool  EC(Point& p);
@@ -57,7 +58,7 @@ public:
 	Point ParsePublicKeyHex(std::string str, bool& isCompressed);
 	bool CheckPudAddress(std::string address);
 	static Int DecodePrivateKey(char* key, bool* compressed);
-
+	static Int DecodePrivateKey2(char* key, bool* compressed);
 	Point Add(Point& p1, Point& p2);
 	Point Add2(Point& p1, Point& p2);
 	Point AddDirect(Point& p1, Point& p2);

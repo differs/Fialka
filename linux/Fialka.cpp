@@ -3,6 +3,7 @@
 #include "SECP256k1.h"
 #include "sha256.cpp"
 #include "hash/keccak160.h"
+#include "hash/sha256.h"
 #include "IntGroup.h"
 #include "Timer.h"
 #include <cstring>
@@ -11,14 +12,14 @@
 #include <cassert>
 #include <algorithm>
 #include <iostream>
-
+#include "hash/sha512.h"
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sstream>
 #include <stdlib.h>
-//#include <conio.h>
-
+#include <conio.h>
+#include "hash/sha512.h"
 #include <vector>
 #include <random>
 #include <ctime>
@@ -32,10 +33,39 @@
 #include <string>
 #include <cstdlib>
 #include <ctime>
+#include "Base58.h"
+#include "bip39/bip39.h"
+#include "dictionary/english.h"
+#include "dictionary/spanish.h"
+#include "dictionary/japanese.h"
+#include "dictionary/italian.h"
+#include "dictionary/french.h"
+#include "dictionary/korean.h"
+#include "dictionary/chinese_simplified.h"
+#include "dictionary/chinese_traditional.h"
+
+#include "picosha2.h"
+
+#include <vector>
+#include <random>
+#include <climits>
+#include <algorithm>
+#include <functional>
+#include <cassert>
+#include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <array>
+#include <cstring>
+#include "includeAll.h"
+
+
+
 #ifndef WIN64
 #include <pthread.h>
 #endif
-
+unsigned char master_node[NODE_LENGTH];
 using namespace std;
 vector <char> alreadyprintedcharacters;
 Point Gn[CPU_GRP_SIZE / 2];
@@ -245,6 +275,9 @@ void Fialka::InitGenratorTable()
 		if (zez == "Passphrases") {
 			printf("\n  Mode         : %.0f \n  Rotor        : Loading Passphrases from file: %s ...", (double)rekey, seed.c_str());
 		}
+		if (zez == "BIP") {
+			printf("\n  Mode         : %.0f \n  Rotor        : Loading BIP39 WORDs from file: %s ...", (double)rekey, seed.c_str());
+		}
 
 		ifstream ifs2(seed);
 		int n = 0;
@@ -274,15 +307,33 @@ void Fialka::InitGenratorTable()
 			printf("  Rotor        : Only letters and symbols: A-Za-z0-9À-ßà-ÿ¸¨üÚÜú `~!@#$%&*()-_=+{}|;:'<>,./? others will be Skipped!\n");
 
 		}
+		if (zez == "BIP") {
+			int daba = nbit + 1;
+			int skoka = daba * 6;
+			printf("  Loaded       : %d BIPs words", stope);
+			printf("\n  Mode BIP     : BIP39 -> Bip32 -> Bip44 ");
+			printf("\n  Use words    : English 3,6,9,12,15,18,21,24 ");
+			printf("\n  BIP32        : Account 0 m/0/0 -> m/0/%d", nbit);
+			printf("\n  BIP32        : Account 1 m/1/0 -> m/1/%d", nbit);
+			printf("\n  BIP44        : Account 0 External 0 m/44'/0'/0'/0/0 -> m/44'/0'/0'/0/%d", nbit);
+			printf("\n  BIP44        : Account 0 External 1 m/44'/0'/0'/1/0 -> m/44'/0'/0'/1/%d", nbit);
+			printf("\n  BIP44        : Account 1 External 0 m/44'/0'/1'/0/0 -> m/44'/0'/1'/0/%d", nbit);
+			printf("\n  BIP44        : Account 1 External 1 m/44'/0'/1'/1/0 -> m/44'/0'/1'/1/%d", nbit);
+			printf("\n  Check        : %d addresses for each account (Total addr. for each BIP %d)\n", daba, skoka);
+			
+			if (nbit2 > 1) {
+				printf("  Rotor CPU    : Only 1 cores -t 1 MAX!!! You are using (%d) cores!!! USE max -t 1 \n  If you need faster, run copies of the Fialka M-125 program with different text files. \n\n", nbit2);
+				exit(1);
+			}
+		}
 
-
-		printf("  Rotor        : For files up to 100,000 use -t 1 For large file max to 2,147,483,647 lines use -t 1-11 max \n");
+		printf("  Rotor        : For files up to 100,000 use -t 1 For large file max to 2,147,483,647 lines use -t 1-11 max (For BIP -t 1 MAX)\n");
 
 		if (nbit2 > 11) {
 			printf("  Rotor CPU    : Only 11 cores -t 11 MAX!!! You are using (%d) cores!!! USE max -t 1-11 \n\n", nbit2);
 			exit(1);
 		}
-		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n\n");
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
 
 	}
 
@@ -293,7 +344,7 @@ void Fialka::InitGenratorTable()
 		printf("  WIF          : %s \n", seed.c_str());
 		printf("  Value        : %d x (1-Z Base58) \n", nbit);
 		printf("  Example      : %s + %d random 1-Z Base58\n", seed.c_str(), nbit);
-		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n\n");
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
 	}
 	if (rekey == 3) {
 		printf("\n  Mode         : %.0f \n", (double)rekey);
@@ -998,7 +1049,7 @@ void Fialka::InitGenratorTable()
 			}
 		}
 		file7777.close();
-		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n\n");
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
 	}
 	if (rekey == 4) {
 
@@ -1232,7 +1283,7 @@ void Fialka::InitGenratorTable()
 			}
 		}
 		file7777.close();
-		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n\n");
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
 	}
 	if (rekey == 5) {
 
@@ -1466,7 +1517,7 @@ void Fialka::InitGenratorTable()
 			}
 		}
 		file7777.close();
-		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n\n");
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
 	}
 	if (rekey == 6) {
 
@@ -1700,7 +1751,7 @@ void Fialka::InitGenratorTable()
 			}
 		}
 		file7777.close();
-		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n\n");
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
 	}
 	if (rekey == 7) {
 		printf("\n  Mode         : %.0f \n", (double)rekey);
@@ -2402,7 +2453,7 @@ void Fialka::InitGenratorTable()
 			}
 		}
 		file7777.close();
-		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n\n");
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
 	}
 	if (rekey == 8) {
 
@@ -2645,9 +2696,9 @@ void Fialka::InitGenratorTable()
 			}
 		}
 		file7777.close();
-		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n\n");
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
 	}
-	if (rekey == 9) {
+	if (rekey == 0) {
 		printf("\n  Mode         : %.0f \n", (double)rekey);
 		printf("  Rotor        : Paralleland sequential search for WIF 65536 values\n");
 		printf("  Rotor        : Save checkpoints every 5 minutes in NEXT-WIF.txt\n");
@@ -2681,7 +2732,7 @@ void Fialka::InitGenratorTable()
 			}
 		}
 		file7777.close();
-		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n\n");
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
 	}
 
 	if (rekey == 10) {
@@ -2689,16 +2740,754 @@ void Fialka::InitGenratorTable()
 		printf("\n  Mode         : %.0f \n", (double)rekey);
 		printf("  Rotor        : Random search Minikeys 22 litters. Ex. Sxxxxxxxxxxxxxxxxxxxxx\n");
 		printf("  Letters      : Base58 (ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789)\n");
-		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n\n");
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
 	}
 	if (rekey == 11) {
 
 		printf("\n  Mode         : %.0f \n", (double)rekey);
 		printf("  Rotor        : Random search Minikeys 30 litters. Ex. Sxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n");
 		printf("  Letters      : Base58 (ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789)\n");
-		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n\n");
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
 	}
-	if (rekey > 11) {
+	if (rekey == 12) {
+
+		printf("\n  Mode         : %.0f \n", (double)rekey);
+		printf("  Rotor        : Random search Minikeys\n");
+		printf("  Letters      : Base58 (ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789)\n");
+		printf("  Rotor        : %s[random %d letters]%s \n", seed.c_str(), nbit, zez.c_str());
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
+	}
+	if (rekey == 13) {
+
+		printf("\n  Mode         : %.0f \n", (double)rekey);
+		printf("  Rotor        : Random search Minikeys\n");
+		printf("  Letters      : Base58 (ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789)\n");
+		printf("  Rotor        : %s[random %d letters]%s \n", seed.c_str(), nbit, zez.c_str());
+		printf("  Rotor        : Checking mini-keys Sxxxxxxxxxxxxxxxxxxx+? If the initial numbers of the private key do not correspond to 00... skip...   \n");
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
+	}
+
+	if (rekey == 14) {
+		printf("\n  Mode         : %.0f \n", (double)rekey);
+		printf("  Rotor        : Paralleland sequential search for WIF values. MAX -t 12, 1 core = 1 line\n");
+		printf("  Rotor        : Save checkpoints every 5 minutes in NEXT-WIF.txt\n");
+		printf("  Rotor        : Activated filter-replacement of 3 identical letters (AAA->AAB) every 1 minute\n");
+		printf("  Rotor        : If the checksum (32 bit) does not equal the private key, skip...\n");
+		if (nbit2 > 12) {
+			printf("  Rotor CPU    : Only 12 cores -t 12 MAX!!! You are using (%d) cores!!! USE max -t 12 \n  If you need faster, run copies of the Fialka M-125 program!. \n\n", nbit2);
+			exit(1);
+		}
+		ifstream file7777("WIF.txt");
+		string s7777;
+		string initial;
+		for (int i = 0; i < nbit2; i++) {
+			getline(file7777, s7777);
+
+			if (s7777 == "") {
+				printf("\n  Rotor        : Check the text file WIF.txt line %d is empty!!! \n  1 core = 1 line with WIF private keys L,K,5! \n  %d cores = %d WIF private keys in the WIF.txt file\n\n", i + 1, nbit2, nbit2);
+				exit(1);
+
+			}
+			if (s7777[0] == 'K' || s7777[0] == 'L' || s7777[0] == '5') {
+
+			}
+			else {
+				printf("\n  Rotor        : WIF private key starts with L,K,5 check file WIF.txt \n  This is %s NOT a WIF!\n  Check in the text file WIF.txt line %d  \n\n", s7777.c_str(), i + 1);
+				exit(1);
+			}
+			if (s7777.length() > 52 || s7777.length() < 51) {
+				int oshibka = s7777.length();
+				printf("\n  Rotor        : WIF private key on line %d has the wrong length of %d letters!\n  Uncompressed WIF 5.. (51 letters) \n  Compressed WIF L..,K.. (52 letters) \n\n", i + 1, oshibka);
+				exit(1);
+			}
+
+			if (i == 0) {
+
+				if (nbit == 0) {
+					str0 = s7777;
+					printf("  Start WIF(1) : %s \n", str0.c_str());
+				}
+				else {
+					str0 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					int shte = konec - nbit;
+					kstr0 = s7777.substr(nbit, konec);
+					printf("  Rotor        : Movable part wif (%d) + fixed part (%d) \n", nbit, shte);
+					printf("  Start WIF(1) : %s+[%s]\n", str0.c_str(), kstr0.c_str());
+				}
+
+			}
+			if (i == nbit2 - 1) {
+				printf("            ... \n");
+				printf("  Start WIF(%d) : %s \n", nbit2, s7777.c_str());
+
+			}
+
+			if (i == 1) {
+
+				if (nbit == 0) {
+					str1 = s7777;
+				}
+				else {
+					str1 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr1 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 2) {
+
+				if (nbit == 0) {
+					str2 = s7777;
+				}
+				else {
+					str2 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr2 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 3) {
+
+				if (nbit == 0) {
+					str3 = s7777;
+				}
+				else {
+					str3 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr3 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 4) {
+
+				if (nbit == 0) {
+					str4 = s7777;
+				}
+				else {
+					str4 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr4 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 5) {
+
+				if (nbit == 0) {
+					str5 = s7777;
+				}
+				else {
+					str5 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr5 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 6) {
+
+				if (nbit == 0) {
+					str6 = s7777;
+				}
+				else {
+					str6 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr6 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 7) {
+				if (nbit == 0) {
+					str7 = s7777;
+				}
+				else {
+					str7 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr7 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 8) {
+				if (nbit == 0) {
+					str8 = s7777;
+				}
+				else {
+					str8 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr8 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 9) {
+				if (nbit == 0) {
+					str9 = s7777;
+				}
+				else {
+					str9 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr9 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 10) {
+				if (nbit == 0) {
+					str10 = s7777;
+				}
+				else {
+					str10 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr10 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 11) {
+				if (nbit == 0) {
+					str11 = s7777;
+				}
+				else {
+					str11 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr11 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 12) {
+				if (nbit == 0) {
+					str12 = s7777;
+				}
+				else {
+					str12 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr12 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 13) {
+				if (nbit == 0) {
+					str13 = s7777;
+				}
+				else {
+					str13 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr13 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 14) {
+				if (nbit == 0) {
+					str14 = s7777;
+				}
+				else {
+					str14 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr14 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 15) {
+				if (nbit == 0) {
+					str15 = s7777;
+				}
+				else {
+					str15 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr15 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 16) {
+				if (nbit == 0) {
+					str16 = s7777;
+				}
+				else {
+					str16 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr16 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 17) {
+				if (nbit == 0) {
+					str17 = s7777;
+				}
+				else {
+					str17 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr17 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 18) {
+				if (nbit == 0) {
+					str18 = s7777;
+				}
+				else {
+					str18 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr18 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 19) {
+				if (nbit == 0) {
+					str19 = s7777;
+				}
+				else {
+					str19 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr19 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 20) {
+				if (nbit == 0) {
+					str20 = s7777;
+				}
+				else {
+					str20 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr20 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 21) {
+				if (nbit == 0) {
+					str21 = s7777;
+				}
+				else {
+					str21 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr21 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 22) {
+				if (nbit == 0) {
+					str22 = s7777;
+				}
+				else {
+					str22 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr22 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 23) {
+				if (nbit == 0) {
+					str23 = s7777;
+				}
+				else {
+					str23 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr23 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 24) {
+				if (nbit == 0) {
+					str24 = s7777;
+				}
+				else {
+					str24 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr24 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 25) {
+				if (nbit == 0) {
+					str25 = s7777;
+				}
+				else {
+					str25 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr25 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 26) {
+				if (nbit == 0) {
+					str26 = s7777;
+				}
+				else {
+					str26 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr26 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 27) {
+				if (nbit == 0) {
+					str27 = s7777;
+				}
+				else {
+					str27 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr27 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 28) {
+				if (nbit == 0) {
+					str28 = s7777;
+				}
+				else {
+					str28 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr28 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 29) {
+				if (nbit == 0) {
+					str29 = s7777;
+				}
+				else {
+					str29 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr29 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 30) {
+				if (nbit == 0) {
+					str30 = s7777;
+				}
+				else {
+					str30 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr30 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 31) {
+				if (nbit == 0) {
+					str31 = s7777;
+				}
+				else {
+					str31 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr31 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 32) {
+				if (nbit == 0) {
+					str32 = s7777;
+				}
+				else {
+					str32 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr32 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 33) {
+				if (nbit == 0) {
+					str33 = s7777;
+				}
+				else {
+					str33 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr33 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 34) {
+				if (nbit == 0) {
+					str34 = s7777;
+				}
+				else {
+					str34 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr34 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 35) {
+				if (nbit == 0) {
+					str35 = s7777;
+				}
+				else {
+					str35 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr35 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 36) {
+				if (nbit == 0) {
+					str36 = s7777;
+				}
+				else {
+					str36 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr36 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 37) {
+				if (nbit == 0) {
+					str37 = s7777;
+				}
+				else {
+					str37 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr37 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 38) {
+				if (nbit == 0) {
+					str38 = s7777;
+				}
+				else {
+					str38 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr38 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 39) {
+				if (nbit == 0) {
+					str39 = s7777;
+				}
+				else {
+					str39 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr39 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 40) {
+				if (nbit == 0) {
+					str40 = s7777;
+				}
+				else {
+					str40 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr40 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 41) {
+				if (nbit == 0) {
+					str41 = s7777;
+				}
+				else {
+					str41 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr41 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 42) {
+				if (nbit == 0) {
+					str42 = s7777;
+				}
+				else {
+					str42 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr42 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 43) {
+				if (nbit == 0) {
+					str43 = s7777;
+				}
+				else {
+					str43 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr43 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 44) {
+				if (nbit == 0) {
+					str44 = s7777;
+				}
+				else {
+					str44 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr44 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 45) {
+				if (nbit == 0) {
+					str45 = s7777;
+				}
+				else {
+					str45 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr45 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 46) {
+				if (nbit == 0) {
+					str46 = s7777;
+				}
+				else {
+					str46 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr46 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 47) {
+				if (nbit == 0) {
+					str47 = s7777;
+				}
+				else {
+					str47 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr47 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 48) {
+				if (nbit == 0) {
+					str48 = s7777;
+				}
+				else {
+					str48 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr48 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 49) {
+				if (nbit == 0) {
+					str49 = s7777;
+				}
+				else {
+					str49 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr49 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 50) {
+				if (nbit == 0) {
+					str50 = s7777;
+				}
+				else {
+					str50 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr50 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 51) {
+				if (nbit == 0) {
+					str51 = s7777;
+				}
+				else {
+					str51 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr51 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 52) {
+				if (nbit == 0) {
+					str52 = s7777;
+				}
+				else {
+					str52 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr52 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 53) {
+				if (nbit == 0) {
+					str53 = s7777;
+				}
+				else {
+					str53 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr53 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 54) {
+				if (nbit == 0) {
+					str54 = s7777;
+				}
+				else {
+					str54 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr54 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 55) {
+				if (nbit == 0) {
+					str55 = s7777;
+				}
+				else {
+					str55 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr55 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 56) {
+				if (nbit == 0) {
+					str56 = s7777;
+				}
+				else {
+					str56 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr56 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 57) {
+				if (nbit == 0) {
+					str57 = s7777;
+				}
+				else {
+					str57 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr57 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 58) {
+				if (nbit == 0) {
+					str58 = s7777;
+				}
+				else {
+					str58 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr58 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 59) {
+				if (nbit == 0) {
+					str59 = s7777;
+				}
+				else {
+					str59 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr59 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 60) {
+				if (nbit == 0) {
+					str60 = s7777;
+				}
+				else {
+					str60 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr60 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 61) {
+				if (nbit == 0) {
+					str61 = s7777;
+				}
+				else {
+					str61 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr61 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 62) {
+				if (nbit == 0) {
+					str62 = s7777;
+				}
+				else {
+					str62 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr62 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 63) {
+				if (nbit == 0) {
+					str63 = s7777;
+				}
+				else {
+					str63 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr63 = s7777.substr(nbit, konec);
+				}
+			}
+			if (i == 64) {
+				if (nbit == 0) {
+					str64 = s7777;
+				}
+				else {
+					str64 = s7777.substr(0, nbit);
+					int konec = s7777.length();
+					kstr64 = s7777.substr(nbit, konec);
+				}
+			}
+		}
+		file7777.close();
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
+	}
+	
+	if (rekey == 15) {
+
+		printf("\n  Mode         : %.0f \n", (double)rekey);
+		printf("  Rotor        : Random search part WIF\n");
+		printf("  Letters      : Base58 (ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789)\n");
+		printf("  Rotor        : %s[random %d letters]%s \n", seed.c_str(), nbit, zez.c_str());
+		printf("  Rotor        : If the checksum 32 bit (8 last letters in a WIF) does not equal the private key, SKIP...\n");
+		printf("  Site         : https://github.com/phrutis/Fialka \n  Donate       : bc1qh2mvnf5fujg93mwl8pe688yucaw9sflmwsukz9 \n");
+		if (nbit2 > 12) {
+			printf("  Rotor CPU    : Only 12 cores -t 12 MAX!!! You are using (%d) cores!!! USE max -t 12 \n  If you need faster, run copies of the Fialka M-125 program!. \n\n", nbit2);
+			exit(1);
+		}
+	}
+	if (rekey > 16) {
 		printf("\n  More modes in development! Visit to https://github.com/phrutis/Fialka \n\n");
 		exit(1);
 	
@@ -2749,13 +3538,23 @@ void Fialka::output(std::string addr, std::string pAddr, std::string pAddrHex, s
 
 	if (!needToClose)
 		printf("\n");
-	fprintf(f, "PubAddress: %s\n", addr.c_str());
-	fprintf(stdout, "\n  =================================================================================\n");
-	fprintf(stdout, "  PubAddress: %s\n", addr.c_str());
+	fprintf(f, "Address   : %s\n", addr.c_str());
+	fprintf(stdout, "\n  =================================== FOUND! ===================================\n");
+	if (rekey == 1) {
+
+		if (zez == "BIP") {
+			
+			fprintf(f, "BIP Words : %s\n", input1.c_str());
+			fprintf(stdout, "  BIP Words : %s\n", input1.c_str());
+			fprintf(f, "BIP39 SEED: %s\n", str64.c_str());
+			fprintf(stdout, "  BIP39 SEED: %s\n", str64.c_str());
+		}
+	}
+	fprintf(stdout, "  Address   : %s\n", addr.c_str());
 
 	if (coinType == COIN_BTC) {
-		fprintf(f, "Priv (WIF): p2pkh:%s\n", pAddr.c_str());
-		fprintf(stdout, "  Priv (WIF): p2pkh:%s\n", pAddr.c_str());
+		fprintf(f, "Priv (WIF): p2pkh :%s\n", pAddr.c_str());
+		fprintf(stdout, "  Priv (WIF): p2pkh: %s\n", pAddr.c_str());
 	}
 
 	fprintf(f, "Priv (HEX): %s\n", pAddrHex.c_str());
@@ -2764,8 +3563,8 @@ void Fialka::output(std::string addr, std::string pAddr, std::string pAddrHex, s
 	fprintf(f, "PubK (HEX): %s\n", pubKey.c_str());
 	fprintf(stdout, "  PubK (HEX): %s\n", pubKey.c_str());
 
-	fprintf(f, "=================================================================================\n");
-	fprintf(stdout, "  =================================================================================\n");
+	fprintf(f, "================================================================================\n");
+	fprintf(stdout, "  ==============================================================================\n");
 
 	if (needToClose)
 		fclose(f);
@@ -3197,78 +3996,688 @@ void Fialka::FindKeyCPU(TH_PARAM * ph)
 							char* cstr = &nos[0];
 							key.SetBase16(cstr);
 						}
-						input1 = input;
-						input2 = key;
-						startP = secp->ComputePublicKey(&key);
-						int i = 0;
+						if (zez == "BIP") {
+							uint8_t seed7[64];
+							PointAffine Mpublickey[1];
+							unsigned char chaincode[CANARY_LENGTH];
+							unsigned char out[32 + CANARY_LENGTH];
+							unsigned char j;
+							input1 = input;
+							akk += 1;
+							string salt = "mnemonic";
+
+							unsigned char hseed0[64];
+							pbkdf2_hmac_sha512(hseed0, 64, (const uint8_t*)s77.c_str(), s77.length(),
+								(const uint8_t*)salt.c_str(), salt.length(),
+								2048);
+
+							str64 = sha512_hex(hseed0);
+
+							bip32SeedToNode(master_node, hseed0, 64);
+
+							for (int nk1 = 0; nk1 < nbit; nk1++) {
+
+								unsigned long TxPath[20] = { 0,nk1 };
+								bip32DerivePrivate2(out, master_node, TxPath, 2);
+
+								unsigned int size = 32;
+								unsigned int ik;
+								string str0 = "";
+								for (ik = (uint8_t)(size - 1); ik < size; ik--)
+								{
+									char s[32];
+									snprintf(s, 32, "%02X", out[ik]);
+									string str777(s);
+									str0 = str0 + str777;
+								}
+
+								char* cstr959 = &str0[0];
+								key.SetBase16(cstr959);
+								
+								startP = secp->ComputePublicKey(&key);
+								int i = 0;
+								if (coinType == COIN_BTC) {
+									switch (compMode) {
+									case SEARCH_COMPRESSED:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(true, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									case SEARCH_UNCOMPRESSED:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(false, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									case SEARCH_BOTH:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(true, key, i, startP);
+											checkMultiAddresses(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(true, key, i, startP);
+											checkSingleAddress(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(true, key, i, startP);
+											checkMultiXPoints(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(true, key, i, startP);
+											checkSingleXPoint(false, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									}
+								}
+								else {
+									switch (searchMode) {
+									case (int)SEARCH_MODE_MA:
+										checkMultiAddressesETH(key, i, startP);
+										break;
+									case (int)SEARCH_MODE_SA:
+										checkSingleAddressETH(key, i, startP);
+										break;
+									default:
+										break;
+									}
+								}
+								counters[thId] += 1;
+							}
+
+							for (int nk1 = 0; nk1 < nbit; nk1++) {
+
+								unsigned long TxPath[20] = { 1,nk1 };
+								bip32DerivePrivate2(out, master_node, TxPath, 2);
+
+								unsigned int size = 32;
+								unsigned int ik;
+								str0 = "";
+								for (ik = (uint8_t)(size - 1); ik < size; ik--)
+								{
+									char s[32];
+									snprintf(s, 32, "%02X", out[ik]);
+									string str777(s);
+									str0 = str0 + str777;
+								}
+
+								char* cstr959 = &str0[0];
+								key.SetBase16(cstr959);
+								
+								startP = secp->ComputePublicKey(&key);
+								int i = 0;
+								if (coinType == COIN_BTC) {
+									switch (compMode) {
+									case SEARCH_COMPRESSED:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(true, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									case SEARCH_UNCOMPRESSED:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(false, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									case SEARCH_BOTH:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(true, key, i, startP);
+											checkMultiAddresses(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(true, key, i, startP);
+											checkSingleAddress(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(true, key, i, startP);
+											checkMultiXPoints(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(true, key, i, startP);
+											checkSingleXPoint(false, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									}
+								}
+								else {
+									switch (searchMode) {
+									case (int)SEARCH_MODE_MA:
+										checkMultiAddressesETH(key, i, startP);
+										break;
+									case (int)SEARCH_MODE_SA:
+										checkSingleAddressETH(key, i, startP);
+										break;
+									default:
+										break;
+									}
+								}
+								counters[thId] += 1;
+
+							}
+
+							for (int nk1 = 0; nk1 < nbit; nk1++) {
+
+								unsigned long TxPath[20] = { 0x8000002C,0x80000000,0x80000000,0,nk1 };
+								bip32DerivePrivate2(out, master_node, TxPath, 5);
+
+								unsigned int size = 32;
+								unsigned int ik;
+								str0 = "";
+								for (ik = (uint8_t)(size - 1); ik < size; ik--)
+								{
+									char s[32];
+									snprintf(s, 32, "%02X", out[ik]);
+									string str777(s);
+									str0 = str0 + str777;
+								}
+
+								char* cstr959 = &str0[0];
+								key.SetBase16(cstr959);
+								
+								startP = secp->ComputePublicKey(&key);
+								int i = 0;
+								if (coinType == COIN_BTC) {
+									switch (compMode) {
+									case SEARCH_COMPRESSED:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(true, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									case SEARCH_UNCOMPRESSED:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(false, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									case SEARCH_BOTH:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(true, key, i, startP);
+											checkMultiAddresses(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(true, key, i, startP);
+											checkSingleAddress(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(true, key, i, startP);
+											checkMultiXPoints(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(true, key, i, startP);
+											checkSingleXPoint(false, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									}
+								}
+								else {
+									switch (searchMode) {
+									case (int)SEARCH_MODE_MA:
+										checkMultiAddressesETH(key, i, startP);
+										break;
+									case (int)SEARCH_MODE_SA:
+										checkSingleAddressETH(key, i, startP);
+										break;
+									default:
+										break;
+									}
+								}
+								counters[thId] += 1;
+							}
+							for (int nk1 = 0; nk1 < nbit; nk1++) {
+
+								unsigned long TxPath[20] = { 0x8000002C,0x80000000,0x80000000,1,nk1 };
+								bip32DerivePrivate2(out, master_node, TxPath, 5);
+
+								unsigned int size = 32;
+								unsigned int ik;
+								str0 = "";
+								for (ik = (uint8_t)(size - 1); ik < size; ik--)
+								{
+									char s[32];
+									snprintf(s, 32, "%02X", out[ik]);
+									string str777(s);
+									str0 = str0 + str777;
+								}
+
+								char* cstr959 = &str0[0];
+								key.SetBase16(cstr959);
+
+								startP = secp->ComputePublicKey(&key);
+								int i = 0;
+								if (coinType == COIN_BTC) {
+									switch (compMode) {
+									case SEARCH_COMPRESSED:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(true, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									case SEARCH_UNCOMPRESSED:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(false, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									case SEARCH_BOTH:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(true, key, i, startP);
+											checkMultiAddresses(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(true, key, i, startP);
+											checkSingleAddress(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(true, key, i, startP);
+											checkMultiXPoints(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(true, key, i, startP);
+											checkSingleXPoint(false, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									}
+								}
+								else {
+									switch (searchMode) {
+									case (int)SEARCH_MODE_MA:
+										checkMultiAddressesETH(key, i, startP);
+										break;
+									case (int)SEARCH_MODE_SA:
+										checkSingleAddressETH(key, i, startP);
+										break;
+									default:
+										break;
+									}
+								}
+								counters[thId] += 1;
+							}
+							for (int nk1 = 0; nk1 < nbit; nk1++) {
+
+								unsigned long TxPath[20] = { 0x8000002C,0x80000001,0x80000000,0,nk1 };
+								bip32DerivePrivate2(out, master_node, TxPath, 5);
+
+								unsigned int size = 32;
+								unsigned int ik;
+								str0 = "";
+								for (ik = (uint8_t)(size - 1); ik < size; ik--)
+								{
+									char s[32];
+									snprintf(s, 32, "%02X", out[ik]);
+									string str777(s);
+									str0 = str0 + str777;
+								}
+
+								char* cstr959 = &str0[0];
+								key.SetBase16(cstr959);
+
+								startP = secp->ComputePublicKey(&key);
+								int i = 0;
+								if (coinType == COIN_BTC) {
+									switch (compMode) {
+									case SEARCH_COMPRESSED:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(true, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									case SEARCH_UNCOMPRESSED:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(false, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									case SEARCH_BOTH:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(true, key, i, startP);
+											checkMultiAddresses(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(true, key, i, startP);
+											checkSingleAddress(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(true, key, i, startP);
+											checkMultiXPoints(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(true, key, i, startP);
+											checkSingleXPoint(false, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									}
+								}
+								else {
+									switch (searchMode) {
+									case (int)SEARCH_MODE_MA:
+										checkMultiAddressesETH(key, i, startP);
+										break;
+									case (int)SEARCH_MODE_SA:
+										checkSingleAddressETH(key, i, startP);
+										break;
+									default:
+										break;
+									}
+								}
+								counters[thId] += 1;
+							}
+
+							for (int nk1 = 0; nk1 < nbit; nk1++) {
+
+								unsigned long TxPath[20] = { 0x8000002C,0x80000000,0x80000001,1,nk1 };
+								bip32DerivePrivate2(out, master_node, TxPath, 5);
+
+								unsigned int size = 32;
+								unsigned int ik;
+								str0 = "";
+								for (ik = (uint8_t)(size - 1); ik < size; ik--)
+								{
+									char s[32];
+									snprintf(s, 32, "%02X", out[ik]);
+									string str777(s);
+									str0 = str0 + str777;
+								}
+
+								char* cstr959 = &str0[0];
+								key.SetBase16(cstr959);
+
+								startP = secp->ComputePublicKey(&key);
+								int i = 0;
+								if (coinType == COIN_BTC) {
+									switch (compMode) {
+									case SEARCH_COMPRESSED:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(true, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(true, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									case SEARCH_UNCOMPRESSED:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(false, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									case SEARCH_BOTH:
+										switch (searchMode) {
+										case (int)SEARCH_MODE_MA:
+											checkMultiAddresses(true, key, i, startP);
+											checkMultiAddresses(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SA:
+											checkSingleAddress(true, key, i, startP);
+											checkSingleAddress(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_MX:
+											checkMultiXPoints(true, key, i, startP);
+											checkMultiXPoints(false, key, i, startP);
+											break;
+										case (int)SEARCH_MODE_SX:
+											checkSingleXPoint(true, key, i, startP);
+											checkSingleXPoint(false, key, i, startP);
+											break;
+										default:
+											break;
+										}
+										break;
+									}
+								}
+								else {
+									switch (searchMode) {
+									case (int)SEARCH_MODE_MA:
+										checkMultiAddressesETH(key, i, startP);
+										break;
+									case (int)SEARCH_MODE_SA:
+										checkSingleAddressETH(key, i, startP);
+										break;
+									default:
+										break;
+									}
+								}
+								counters[thId] += 1;
+							}
 						
-						if (coinType == COIN_BTC) {
-							switch (compMode) {
-							case SEARCH_COMPRESSED:
-								switch (searchMode) {
-								case (int)SEARCH_MODE_MA:
-									checkMultiAddresses(true, key, i, startP);
-									break;
-								case (int)SEARCH_MODE_SA:
-									checkSingleAddress(true, key, i, startP);
-									break;
-								case (int)SEARCH_MODE_MX:
-									checkMultiXPoints(true, key, i, startP);
-									break;
-								case (int)SEARCH_MODE_SX:
-									checkSingleXPoint(true, key, i, startP);
-									break;
-								}
-								break;
-							case SEARCH_UNCOMPRESSED:
-								switch (searchMode) {
-								case (int)SEARCH_MODE_MA:
-									checkMultiAddresses(false, key, i, startP);
-									break;
-								case (int)SEARCH_MODE_SA:
-									checkSingleAddress(false, key, i, startP);
-									break;
-								case (int)SEARCH_MODE_MX:
-									checkMultiXPoints(false, key, i, startP);
-									break;
-								case (int)SEARCH_MODE_SX:
-									checkSingleXPoint(false, key, i, startP);
-									break;
-								}
-								break;
-							case SEARCH_BOTH:
-								switch (searchMode) {
-								case (int)SEARCH_MODE_MA:
-									checkMultiAddresses(true, key, i, startP);
-									checkMultiAddresses(false, key, i, startP);
-									break;
-								case (int)SEARCH_MODE_SA:
-									checkSingleAddress(true, key, i, startP);
-									checkSingleAddress(false, key, i, startP);
-									break;
-								case (int)SEARCH_MODE_MX:
-									checkMultiXPoints(true, key, i, startP);
-									checkMultiXPoints(false, key, i, startP);
-									break;
-								case (int)SEARCH_MODE_SX:
-									checkSingleXPoint(true, key, i, startP);
-									checkSingleXPoint(false, key, i, startP);
-									break;
-								}
-								break;
-							}
 						}
-						else {
-							switch (searchMode) {
-							case (int)SEARCH_MODE_MA:
-								checkMultiAddressesETH(key, i, startP);
-								break;
-							case (int)SEARCH_MODE_SA:
-								checkSingleAddressETH(key, i, startP);
-								break;
+
+						if (zez != "BIP") {
+							input1 = input;
+							input2 = key;
+							startP = secp->ComputePublicKey(&key);
+							int i = 0;
+							if (coinType == COIN_BTC) {
+								switch (compMode) {
+								case SEARCH_COMPRESSED:
+									switch (searchMode) {
+									case (int)SEARCH_MODE_MA:
+										checkMultiAddresses(true, key, i, startP);
+										break;
+									case (int)SEARCH_MODE_SA:
+										checkSingleAddress(true, key, i, startP);
+										break;
+									case (int)SEARCH_MODE_MX:
+										checkMultiXPoints(true, key, i, startP);
+										break;
+									case (int)SEARCH_MODE_SX:
+										checkSingleXPoint(true, key, i, startP);
+										break;
+									}
+									break;
+								case SEARCH_UNCOMPRESSED:
+									switch (searchMode) {
+									case (int)SEARCH_MODE_MA:
+										checkMultiAddresses(false, key, i, startP);
+										break;
+									case (int)SEARCH_MODE_SA:
+										checkSingleAddress(false, key, i, startP);
+										break;
+									case (int)SEARCH_MODE_MX:
+										checkMultiXPoints(false, key, i, startP);
+										break;
+									case (int)SEARCH_MODE_SX:
+										checkSingleXPoint(false, key, i, startP);
+										break;
+									}
+									break;
+								case SEARCH_BOTH:
+									switch (searchMode) {
+									case (int)SEARCH_MODE_MA:
+										checkMultiAddresses(true, key, i, startP);
+										checkMultiAddresses(false, key, i, startP);
+										break;
+									case (int)SEARCH_MODE_SA:
+										checkSingleAddress(true, key, i, startP);
+										checkSingleAddress(false, key, i, startP);
+										break;
+									case (int)SEARCH_MODE_MX:
+										checkMultiXPoints(true, key, i, startP);
+										checkMultiXPoints(false, key, i, startP);
+										break;
+									case (int)SEARCH_MODE_SX:
+										checkSingleXPoint(true, key, i, startP);
+										checkSingleXPoint(false, key, i, startP);
+										break;
+									}
+									break;
+								}
 							}
+							else {
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddressesETH(key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddressETH(key, i, startP);
+									break;
+								}
+							}
+							counters[thId] += 1;
+						
 						}
-						counters[thId] += 1;
 						if (bt >= stope) {
 							printf("\n  Search is Finish! Found: %d \n\n", nbFoundKey);
 							exit(1);
@@ -12445,7 +13854,7 @@ void Fialka::FindKeyCPU(TH_PARAM * ph)
 
 							if (proverka200 != str) {
 								zamena = "Filter 3 litters + Replace: " + str + " -> " + proverka200;
-								//SetConsoleTitle(zamena.c_str());
+								SetConsoleTitle(zamena.c_str());
 								str = proverka200;
 								counters2 += 1;
 							}
@@ -13180,7 +14589,7 @@ void Fialka::FindKeyCPU(TH_PARAM * ph)
 
 							if (proverka200 != str) {
 								zamena = "Filter 3 litters + Replace: " + str + " -> " + proverka200;
-								//SetConsoleTitle(zamena.c_str());
+								SetConsoleTitle(zamena.c_str());
 								str = proverka200;
 								counters2 += 1;
 							}
@@ -13915,7 +15324,7 @@ void Fialka::FindKeyCPU(TH_PARAM * ph)
 
 							if (proverka200 != str) {
 								zamena = "Filter 3 litters + Replace: " + str + " -> " + proverka200;
-								//SetConsoleTitle(zamena.c_str());
+								SetConsoleTitle(zamena.c_str());
 								str = proverka200;
 								counters2 += 1;
 							}
@@ -14432,8 +15841,7 @@ void Fialka::FindKeyCPU(TH_PARAM * ph)
 
 				bool isComp;
 				key0 = secp->DecodePrivateKey((char*)priv.c_str(), &isComp);
-
-
+			
 				key.Set(&key0);
 				kisa0.Set(&key0);
 				input1 = priv;
@@ -20688,90 +22096,113 @@ void Fialka::FindKeyCPU(TH_PARAM * ph)
 			}
 
 			string input = str;
-			string nos = sha256(input);
-			char* cstr = &nos[0];
-			key.SetBase16(cstr);
-			if (thId == 0) {
-				input1 = str;
-				input2 = key;
-			}
-			startP = secp->ComputePublicKey(&key);
-			int i = 0;
-			if (coinType == COIN_BTC) {
-				switch (compMode) {
-				case SEARCH_COMPRESSED:
-					switch (searchMode) {
-					case (int)SEARCH_MODE_MA:
-						checkMultiAddresses(true, key, i, startP);
-						break;
-					case (int)SEARCH_MODE_SA:
-						checkSingleAddress(true, key, i, startP);
-						break;
-					case (int)SEARCH_MODE_MX:
-						checkMultiXPoints(true, key, i, startP);
-						break;
-					case (int)SEARCH_MODE_SX:
-						checkSingleXPoint(true, key, i, startP);
-						break;
-					default:
-						break;
+
+			std::stringstream ss12;
+			ss12 << input << "?";
+			std::string nkkr12 = ss12.str();
+
+			string nos = sha256(nkkr12);
+
+			if (nos[0] == '0') {
+
+				if (nos[1] == '0') {
+
+					string nos12 = sha256(str);
+					char* cstr12 = &nos12[0];
+					key.SetBase16(cstr12);
+					
+					if (thId == 0) {
+						input1 = str;
+						input2 = key;
 					}
-					break;
-				case SEARCH_UNCOMPRESSED:
-					switch (searchMode) {
-					case (int)SEARCH_MODE_MA:
-						checkMultiAddresses(false, key, i, startP);
-						break;
-					case (int)SEARCH_MODE_SA:
-						checkSingleAddress(false, key, i, startP);
-						break;
-					case (int)SEARCH_MODE_MX:
-						checkMultiXPoints(false, key, i, startP);
-						break;
-					case (int)SEARCH_MODE_SX:
-						checkSingleXPoint(false, key, i, startP);
-						break;
-					default:
-						break;
+					startP = secp->ComputePublicKey(&key);
+					int i = 0;
+					if (coinType == COIN_BTC) {
+						switch (compMode) {
+						case SEARCH_COMPRESSED:
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddresses(true, key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddress(true, key, i, startP);
+								break;
+							case (int)SEARCH_MODE_MX:
+								checkMultiXPoints(true, key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SX:
+								checkSingleXPoint(true, key, i, startP);
+								break;
+							default:
+								break;
+							}
+							break;
+						case SEARCH_UNCOMPRESSED:
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddresses(false, key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddress(false, key, i, startP);
+								break;
+							case (int)SEARCH_MODE_MX:
+								checkMultiXPoints(false, key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SX:
+								checkSingleXPoint(false, key, i, startP);
+								break;
+							default:
+								break;
+							}
+							break;
+						case SEARCH_BOTH:
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddresses(true, key, i, startP);
+								checkMultiAddresses(false, key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddress(true, key, i, startP);
+								checkSingleAddress(false, key, i, startP);
+								break;
+							case (int)SEARCH_MODE_MX:
+								checkMultiXPoints(true, key, i, startP);
+								checkMultiXPoints(false, key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SX:
+								checkSingleXPoint(true, key, i, startP);
+								checkSingleXPoint(false, key, i, startP);
+								break;
+							default:
+								break;
+							}
+							break;
+						}
 					}
-					break;
-				case SEARCH_BOTH:
-					switch (searchMode) {
-					case (int)SEARCH_MODE_MA:
-						checkMultiAddresses(true, key, i, startP);
-						checkMultiAddresses(false, key, i, startP);
-						break;
-					case (int)SEARCH_MODE_SA:
-						checkSingleAddress(true, key, i, startP);
-						checkSingleAddress(false, key, i, startP);
-						break;
-					case (int)SEARCH_MODE_MX:
-						checkMultiXPoints(true, key, i, startP);
-						checkMultiXPoints(false, key, i, startP);
-						break;
-					case (int)SEARCH_MODE_SX:
-						checkSingleXPoint(true, key, i, startP);
-						checkSingleXPoint(false, key, i, startP);
-						break;
-					default:
-						break;
+					else {
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddressesETH(key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddressETH(key, i, startP);
+							break;
+						default:
+							break;
+						}
 					}
-					break;
+					counters[thId] += 1;
+				
+				}
+				else {
+					counters2 += 1;
+					counters[thId] += 1;
 				}
 			}
 			else {
-				switch (searchMode) {
-				case (int)SEARCH_MODE_MA:
-					checkMultiAddressesETH(key, i, startP);
-					break;
-				case (int)SEARCH_MODE_SA:
-					checkSingleAddressETH(key, i, startP);
-					break;
-				default:
-					break;
-				}
+				counters2 += 1;
+				counters[thId] += 1;
 			}
-			counters[thId] += 1;
 
 		} while (compare(last, str));
 
@@ -21006,12 +22437,8837 @@ void Fialka::FindKeyCPU(TH_PARAM * ph)
 			delete[] pass;
 		}
 	}
+	if (rekey == 12) {
+		int thId = ph->threadId;
+		counters[thId] = 0;
+
+		Int  key;
+		Point startP;
+		srand(time(0));
+		ph->hasStarted = true;
+		ph->rKeyRequest = false;
+
+		if (thId == 0) {
+			
+			while (1 < 2) {
+
+				
+				int N = nbit;
+				char str[]{ "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789" };
+				int strN = 58;
+				char* pass = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass[i] = str[rand() % strN];
+				}
+				pass[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass << zez;
+				std::string nkkr = ss.str();
+
+				string nos = sha256(nkkr);
+				char* cstr = &nos[0];
+				key.SetBase16(cstr);
+
+				if (thId == 0) {
+					input1 = nkkr;
+					input2 = key;
+				}
+				startP = secp->ComputePublicKey(&key);
+				int i = 0;
+				if (coinType == COIN_BTC) {
+					switch (compMode) {
+					case SEARCH_COMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_UNCOMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_BOTH:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					}
+				}
+				else {
+					switch (searchMode) {
+					case (int)SEARCH_MODE_MA:
+						checkMultiAddressesETH(key, i, startP);
+						break;
+					case (int)SEARCH_MODE_SA:
+						checkSingleAddressETH(key, i, startP);
+						break;
+					default:
+						break;
+					}
+				}
+				counters[thId] += 1;
+				delete[] pass;
+			}
+		
+		
+		}
+		if (thId == 1) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "HJKLMDEFGQ56789RSTUVWXYZabcdefghij123kmnopqrNPABCstuvwxyz4" };
+				int strN = 58;
+				char* pass1 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass1[i] = str[rand() % strN];
+				}
+				pass1[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass1 << zez;
+				std::string nkkr = ss.str();
+
+				string nos = sha256(nkkr);
+				char* cstr1 = &nos[0];
+				key.SetBase16(cstr1);
+
+				startP = secp->ComputePublicKey(&key);
+				int i = 0;
+				if (coinType == COIN_BTC) {
+					switch (compMode) {
+					case SEARCH_COMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_UNCOMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_BOTH:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					}
+				}
+				else {
+					switch (searchMode) {
+					case (int)SEARCH_MODE_MA:
+						checkMultiAddressesETH(key, i, startP);
+						break;
+					case (int)SEARCH_MODE_SA:
+						checkSingleAddressETH(key, i, startP);
+						break;
+					default:
+						break;
+					}
+				}
+				counters[thId] += 1;
+				delete[] pass1;
+			}
+		}
+		if (thId == 2) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "noEF9RSTXYZabcdefghiGQ5678j1UVW23kmpqrNPABCstuHJKLMDvwxyz4" };
+				int strN = 58;
+				char* pass2 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass2[i] = str[rand() % strN];
+				}
+				pass2[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass2 << zez;
+				std::string nkkr = ss.str();
+
+				string nos2 = sha256(nkkr);
+				char* cstr2 = &nos2[0];
+				key.SetBase16(cstr2);
+
+				startP = secp->ComputePublicKey(&key);
+				int i = 0;
+				if (coinType == COIN_BTC) {
+					switch (compMode) {
+					case SEARCH_COMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_UNCOMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_BOTH:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					}
+				}
+				else {
+					switch (searchMode) {
+					case (int)SEARCH_MODE_MA:
+						checkMultiAddressesETH(key, i, startP);
+						break;
+					case (int)SEARCH_MODE_SA:
+						checkSingleAddressETH(key, i, startP);
+						break;
+					default:
+						break;
+					}
+				}
+				counters[thId] += 1;
+				delete[] pass2;
+			}
+		}
+		if (thId == 3) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "wxnEoF9RSZabcdefghiGQ8j1UVTXYPABW23km567pqrNCstuHJKLMDvyz4" };
+				int strN = 58;
+				char* pass3 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass3[i] = str[rand() % strN];
+				}
+				pass3[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass3 << zez;
+				std::string nkkr3 = ss.str();
+
+				string nos3 = sha256(nkkr3);
+				char* cstr3 = &nos3[0];
+				key.SetBase16(cstr3);
+
+				startP = secp->ComputePublicKey(&key);
+				int i = 0;
+				if (coinType == COIN_BTC) {
+					switch (compMode) {
+					case SEARCH_COMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_UNCOMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_BOTH:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					}
+				}
+				else {
+					switch (searchMode) {
+					case (int)SEARCH_MODE_MA:
+						checkMultiAddressesETH(key, i, startP);
+						break;
+					case (int)SEARCH_MODE_SA:
+						checkSingleAddressETH(key, i, startP);
+						break;
+					default:
+						break;
+					}
+				}
+				counters[thId] += 1;
+				delete[] pass3;
+			}
+		}
+		if (thId == 4) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "F9YPARSZabcdefghiGQ8j1UwxJKnEoVTXBW23km567pqrNCstuHLMDvyz4" };
+				int strN = 58;
+				char* pass4 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass4[i] = str[rand() % strN];
+				}
+				pass4[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass4 << zez;
+				std::string nkkr4 = ss.str();
+
+				string nos4 = sha256(nkkr4);
+				char* cstr4 = &nos4[0];
+				key.SetBase16(cstr4);
+
+				startP = secp->ComputePublicKey(&key);
+				int i = 0;
+				if (coinType == COIN_BTC) {
+					switch (compMode) {
+					case SEARCH_COMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_UNCOMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_BOTH:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					}
+				}
+				else {
+					switch (searchMode) {
+					case (int)SEARCH_MODE_MA:
+						checkMultiAddressesETH(key, i, startP);
+						break;
+					case (int)SEARCH_MODE_SA:
+						checkSingleAddressETH(key, i, startP);
+						break;
+					default:
+						break;
+					}
+				}
+				counters[thId] += 1;
+				delete[] pass4;
+			}
+		}
+		if (thId == 5) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "GQ8cdefghij1UwxJKqrNCstuHnEoVTXBW23km5F9YPARSZab67pLMDvyz4" };
+				int strN = 58;
+				char* pass5 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass5[i] = str[rand() % strN];
+				}
+				pass5[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass5 << zez;
+				std::string nkkr5 = ss.str();
+
+				string nos5 = sha256(nkkr5);
+				char* cstr5 = &nos5[0];
+				key.SetBase16(cstr5);
+
+				startP = secp->ComputePublicKey(&key);
+				int i = 0;
+				if (coinType == COIN_BTC) {
+					switch (compMode) {
+					case SEARCH_COMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_UNCOMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_BOTH:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					}
+				}
+				else {
+					switch (searchMode) {
+					case (int)SEARCH_MODE_MA:
+						checkMultiAddressesETH(key, i, startP);
+						break;
+					case (int)SEARCH_MODE_SA:
+						checkSingleAddressETH(key, i, startP);
+						break;
+					default:
+						break;
+					}
+				}
+				counters[thId] += 1;
+				delete[] pass5;
+			}
+		}
+		if (thId == 6) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "ARSghij1UwefxJKqrNCstuHcdnEoVTXBW23km5F9YPGQ8Zab67pLMDvyz4" };
+				int strN = 58;
+				char* pass6 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass6[i] = str[rand() % strN];
+				}
+				pass6[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass6 << zez;
+				std::string nkkr6 = ss.str();
+
+				string nos6 = sha256(nkkr6);
+				char* cstr6 = &nos6[0];
+				key.SetBase16(cstr6);
+
+				startP = secp->ComputePublicKey(&key);
+				int i = 0;
+				if (coinType == COIN_BTC) {
+					switch (compMode) {
+					case SEARCH_COMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_UNCOMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_BOTH:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					}
+				}
+				else {
+					switch (searchMode) {
+					case (int)SEARCH_MODE_MA:
+						checkMultiAddressesETH(key, i, startP);
+						break;
+					case (int)SEARCH_MODE_SA:
+						checkSingleAddressETH(key, i, startP);
+						break;
+					default:
+						break;
+					}
+				}
+				counters[thId] += 1;
+				delete[] pass6;
+			}
+		}
+		if (thId == 7) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "oVRSghij1UwefxJKqrNACstuHknETXBW23m5F9YPGcdQ8Zab67pLMD4vyz" };
+				int strN = 58;
+				char* pass7 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass7[i] = str[rand() % strN];
+				}
+				pass7[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass7 << zez;
+				std::string nkkr7 = ss.str();
+
+				string nos7 = sha256(nkkr7);
+				char* cstr7 = &nos7[0];
+				key.SetBase16(cstr7);
+
+				startP = secp->ComputePublicKey(&key);
+				int i = 0;
+				if (coinType == COIN_BTC) {
+					switch (compMode) {
+					case SEARCH_COMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_UNCOMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_BOTH:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					}
+				}
+				else {
+					switch (searchMode) {
+					case (int)SEARCH_MODE_MA:
+						checkMultiAddressesETH(key, i, startP);
+						break;
+					case (int)SEARCH_MODE_SA:
+						checkSingleAddressETH(key, i, startP);
+						break;
+					default:
+						break;
+					}
+				}
+				counters[thId] += 1;
+				delete[] pass7;
+			}
+		}
+		if (thId == 8) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "TVBW23RShij1UwefxJKqrgNyACstuHknEXm5F9YPGcodQ8Zab67pLMD4vz" };
+				int strN = 58;
+				char* pass8 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass8[i] = str[rand() % strN];
+				}
+				pass8[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass8 << zez;
+				std::string nkkr8 = ss.str();
+
+				string nos8 = sha256(nkkr8);
+				char* cstr8 = &nos8[0];
+				key.SetBase16(cstr8);
+
+				startP = secp->ComputePublicKey(&key);
+				int i = 0;
+				if (coinType == COIN_BTC) {
+					switch (compMode) {
+					case SEARCH_COMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_UNCOMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_BOTH:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					}
+				}
+				else {
+					switch (searchMode) {
+					case (int)SEARCH_MODE_MA:
+						checkMultiAddressesETH(key, i, startP);
+						break;
+					case (int)SEARCH_MODE_SA:
+						checkSingleAddressETH(key, i, startP);
+						break;
+					default:
+						break;
+					}
+				}
+				counters[thId] += 1;
+				delete[] pass8;
+			}
+		}
+		if (thId == 9) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "odQ3RSTVBW2hiZab67pLMD4vzj1UwefxJKqrg9YPGNyACstuHknEXm5Fc8" };
+				int strN = 58;
+				char* pass9 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass9[i] = str[rand() % strN];
+				}
+				pass9[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass9 << zez;
+				std::string nkkr9 = ss.str();
+
+				string nos9 = sha256(nkkr9);
+				char* cstr9 = &nos9[0];
+				key.SetBase16(cstr9);
+
+				startP = secp->ComputePublicKey(&key);
+				int i = 0;
+				if (coinType == COIN_BTC) {
+					switch (compMode) {
+					case SEARCH_COMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_UNCOMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_BOTH:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					}
+				}
+				else {
+					switch (searchMode) {
+					case (int)SEARCH_MODE_MA:
+						checkMultiAddressesETH(key, i, startP);
+						break;
+					case (int)SEARCH_MODE_SA:
+						checkSingleAddressETH(key, i, startP);
+						break;
+					default:
+						break;
+					}
+				}
+				counters[thId] += 1;
+				delete[] pass9;
+			}
+		}
+		if (thId == 10) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "pLMD4vzj1UdQ3RSTVnEXm5Fc8wefxBW2hiZab679YPGNyACstuHkJKqrgo" };
+				int strN = 58;
+				char* pass10 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass10[i] = str[rand() % strN];
+				}
+				pass10[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass10 << zez;
+				std::string nkkr10 = ss.str();
+
+				string nos10 = sha256(nkkr10);
+				char* cstr10 = &nos10[0];
+				key.SetBase16(cstr10);
+
+				startP = secp->ComputePublicKey(&key);
+				int i = 0;
+				if (coinType == COIN_BTC) {
+					switch (compMode) {
+					case SEARCH_COMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_UNCOMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_BOTH:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					}
+				}
+				else {
+					switch (searchMode) {
+					case (int)SEARCH_MODE_MA:
+						checkMultiAddressesETH(key, i, startP);
+						break;
+					case (int)SEARCH_MODE_SA:
+						checkSingleAddressETH(key, i, startP);
+						break;
+					default:
+						break;
+					}
+				}
+				counters[thId] += 1;
+				delete[] pass10;
+			}
+		}
+		if (thId == 11) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "3RSTVnEXKqrgowefxBW2hiZpm5Fc8PGNyACstuHkJLMD4vzj1UdQab679Y" };
+				int strN = 58;
+				char* pass11 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass11[i] = str[rand() % strN];
+				}
+				pass11[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass11 << zez;
+				std::string nkkr11 = ss.str();
+
+				string nos11 = sha256(nkkr11);
+				char* cstr11 = &nos11[0];
+				key.SetBase16(cstr11);
+
+				startP = secp->ComputePublicKey(&key);
+				int i = 0;
+				if (coinType == COIN_BTC) {
+					switch (compMode) {
+					case SEARCH_COMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_UNCOMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_BOTH:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					}
+				}
+				else {
+					switch (searchMode) {
+					case (int)SEARCH_MODE_MA:
+						checkMultiAddressesETH(key, i, startP);
+						break;
+					case (int)SEARCH_MODE_SA:
+						checkSingleAddressETH(key, i, startP);
+						break;
+					default:
+						break;
+					}
+				}
+				counters[thId] += 1;
+				delete[] pass11;
+			}
+		}
+		if (thId > 11) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "79YnEX2hiZpmKqLMrg3RSTVD4vzj1W5Fc8PGNyACstuHkJUdQab6owefxB" };
+				int strN = 58;
+				char* pass12 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass12[i] = str[rand() % strN];
+				}
+				pass12[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass12 << zez;
+				std::string nkkr12 = ss.str();
+
+				string nos12 = sha256(nkkr12);
+				char* cstr12 = &nos12[0];
+				key.SetBase16(cstr12);
+
+				startP = secp->ComputePublicKey(&key);
+				int i = 0;
+				if (coinType == COIN_BTC) {
+					switch (compMode) {
+					case SEARCH_COMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_UNCOMPRESSED:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					case SEARCH_BOTH:
+						switch (searchMode) {
+						case (int)SEARCH_MODE_MA:
+							checkMultiAddresses(true, key, i, startP);
+							checkMultiAddresses(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SA:
+							checkSingleAddress(true, key, i, startP);
+							checkSingleAddress(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_MX:
+							checkMultiXPoints(true, key, i, startP);
+							checkMultiXPoints(false, key, i, startP);
+							break;
+						case (int)SEARCH_MODE_SX:
+							checkSingleXPoint(true, key, i, startP);
+							checkSingleXPoint(false, key, i, startP);
+							break;
+						default:
+							break;
+						}
+						break;
+					}
+				}
+				else {
+					switch (searchMode) {
+					case (int)SEARCH_MODE_MA:
+						checkMultiAddressesETH(key, i, startP);
+						break;
+					case (int)SEARCH_MODE_SA:
+						checkSingleAddressETH(key, i, startP);
+						break;
+					default:
+						break;
+					}
+				}
+				counters[thId] += 1;
+				delete[] pass12;
+			}
+		}
+	}
+	if (rekey == 13) {
+		int thId = ph->threadId;
+		counters[thId] = 0;
+
+		Int  key;
+		Point startP;
+		srand(time(0));
+		ph->hasStarted = true;
+		ph->rKeyRequest = false;
+
+		if (thId == 0) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "NPQRkm78norstUuvADEwxyz12FGHJabKLM345BC6STVWpqXYZcdefghij9" };
+				int strN = 58;
+				char* pass = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass[i] = str[rand() % strN];
+				}
+				pass[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass << zez << "?";
+				std::string nkkr = ss.str();
+
+				string nos = sha256(nkkr);
+
+				if (nos[0] == '0') {
+					
+					if (nos[1] == '0') {
+						
+						std::stringstream ss555;
+						ss555 << seed << pass << zez;
+						std::string nkkr555 = ss555.str();
+
+						string nos555 = sha256(nkkr555);
+
+						char* cstr555 = &nos555[0];
+						key.SetBase16(cstr555);
+
+						input1 = nkkr555;
+						input2 = key;
+
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters[thId] += 1;
+						delete[] pass;
+					}
+					else {
+						counters2 += 1;
+						counters[thId] += 1;
+						delete[] pass;
+					}
+				}
+				else {
+					counters2 += 1;
+					counters[thId] += 1;
+					delete[] pass;
+				}
+			}
+
+		}
+		if (thId == 1) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "HJK6vLMDEYZadefghij1UVWX23kmnFGQ5w78bc9RSTopqrNPABCstuxyz4" };
+				int strN = 58;
+				char* pass1 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass1[i] = str[rand() % strN];
+				}
+				pass1[N] = 0;
+
+
+				std::stringstream ss1;
+				ss1 << seed << pass1 << zez << "?";
+				std::string nkkr1 = ss1.str();
+
+				string nos1 = sha256(nkkr1);
+
+				if (nos1[0] == '0') {
+
+					if (nos1[1] == '0') {
+
+						std::stringstream ss111;
+						ss111 << seed << pass1 << zez;
+						std::string nkkr111 = ss111.str();
+
+						string nos111 = sha256(nkkr111);
+
+						char* cstr111 = &nos111[0];
+						key.SetBase16(cstr111);
+
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters[thId] += 1;
+						delete[] pass1;
+					}
+					else {
+						counters2 += 1;
+						counters[thId] += 1;
+						delete[] pass1;
+					}
+				}
+				else {
+					counters2 += 1;
+					counters[thId] += 1;
+					delete[] pass1;
+				}
+			}
+		}
+		if (thId == 2) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "RSTXYZanoEF9befghiGQ5678j1UcwxdVW23kmpqrNPABCstuHJKLMDvyz4" };
+				int strN = 58;
+				char* pass2 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass2[i] = str[rand() % strN];
+				}
+				pass2[N] = 0;
+
+				std::stringstream ss2;
+				ss2 << seed << pass2 << zez << "?";
+				std::string nkkr2 = ss2.str();
+
+				string nos2 = sha256(nkkr2);
+
+				if (nos2[0] == '0') {
+
+					if (nos2[1] == '0') {
+
+						std::stringstream ss222;
+						ss222 << seed << pass2 << zez;
+						std::string nkkr222 = ss222.str();
+
+						string nos222 = sha256(nkkr222);
+
+						char* cstr222 = &nos222[0];
+						key.SetBase16(cstr222);
+
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters[thId] += 1;
+						delete[] pass2;
+					}
+					else {
+						counters2 += 1;
+						counters[thId] += 1;
+						delete[] pass2;
+					}
+				}
+				else {
+					counters2 += 1;
+					counters[thId] += 1;
+					delete[] pass2;
+				}
+			}
+		}
+		if (thId == 3) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "w9RS56ZabcdefgKhiGQ8j1UVTXYPABW23km7pqrNCstuHxnEoFJLMDvyz4" };
+				int strN = 58;
+				char* pass3 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass3[i] = str[rand() % strN];
+				}
+				pass3[N] = 0;
+
+				std::stringstream ss3;
+				ss3 << seed << pass3 << zez << "?";
+				std::string nkkr3 = ss3.str();
+
+				string nos3 = sha256(nkkr3);
+
+				if (nos3[0] == '0') {
+
+					if (nos3[1] == '0') {
+
+						std::stringstream ss333;
+						ss333 << seed << pass3 << zez;
+						std::string nkkr333 = ss333.str();
+
+						string nos333 = sha256(nkkr333);
+
+						char* cstr333 = &nos333[0];
+						key.SetBase16(cstr333);
+
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters[thId] += 1;
+						delete[] pass3;
+					}
+					else {
+						counters2 += 1;
+						counters[thId] += 1;
+						delete[] pass3;
+					}
+				}
+				else {
+					counters2 += 1;
+					counters[thId] += 1;
+					delete[] pass3;
+				}
+			}
+		}
+		if (thId == 4) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "iGQ8km567pj1UwxJKnEoVTXF9YPARSZabcdefghBW23qrNCstuHLMDvyz4" };
+				int strN = 58;
+				char* pass4 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass4[i] = str[rand() % strN];
+				}
+				pass4[N] = 0;
+
+				std::stringstream ss4;
+				ss4 << seed << pass4 << zez << "?";
+				std::string nkkr4 = ss4.str();
+
+				string nos4 = sha256(nkkr4);
+
+				if (nos4[0] == '0') {
+
+					if (nos4[1] == '0') {
+
+						std::stringstream ss444;
+						ss444 << seed << pass4 << zez;
+						std::string nkkr444 = ss444.str();
+
+						string nos444 = sha256(nkkr444);
+
+						char* cstr444 = &nos444[0];
+						key.SetBase16(cstr444);
+
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters[thId] += 1;
+						delete[] pass4;
+					}
+					else {
+						counters2 += 1;
+						counters[thId] += 1;
+						delete[] pass4;
+					}
+				}
+				else {
+					counters2 += 1;
+					counters[thId] += 1;
+					delete[] pass4;
+				}
+			}
+		}
+		if (thId == 5) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "VTXBW2GfgQ8cehij1UxJKqrN3km5F9YPdARSwZab6CstuHnEo7pLMDvyz4" };
+				int strN = 58;
+				char* pass5 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass5[i] = str[rand() % strN];
+				}
+				pass5[N] = 0;
+
+				std::stringstream ss5;
+				ss5 << seed << pass5 << zez << "?";
+				std::string nkkr5 = ss5.str();
+
+				string nos5 = sha256(nkkr5);
+
+				if (nos5[0] == '0') {
+
+					if (nos5[1] == '0') {
+
+						std::stringstream ss555;
+						ss555 << seed << pass5 << zez;
+						std::string nkkr555 = ss555.str();
+
+						string nos555 = sha256(nkkr555);
+
+						char* cstr555 = &nos555[0];
+						key.SetBase16(cstr555);
+
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters[thId] += 1;
+						delete[] pass5;
+					}
+					else {
+						counters2 += 1;
+						counters[thId] += 1;
+						delete[] pass5;
+					}
+				}
+				else {
+					counters2 += 1;
+					counters[thId] += 1;
+					delete[] pass5;
+				}
+			}
+		}
+		if (thId == 6) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "yz4RSghij1UwefxJKqA9YPGQ8Zab67pLMDvrNCstuHcdnEoVTXBW23km5F" };
+				int strN = 58;
+				char* pass6 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass6[i] = str[rand() % strN];
+				}
+				pass6[N] = 0;
+
+				std::stringstream ss6;
+				ss6 << seed << pass6 << zez << "?";
+				std::string nkkr6 = ss6.str();
+
+				string nos6 = sha256(nkkr6);
+
+				if (nos6[0] == '0') {
+
+					if (nos6[1] == '0') {
+
+						std::stringstream ss666;
+						ss666<< seed << pass6 << zez;
+						std::string nkkr666 = ss666.str();
+
+						string nos666 = sha256(nkkr666);
+
+						char* cstr666 = &nos666[0];
+						key.SetBase16(cstr666);
+
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters[thId] += 1;
+						delete[] pass6;
+					}
+					else {
+						counters2 += 1;
+						counters[thId] += 1;
+						delete[] pass6;
+					}
+				}
+				else {
+					counters2 += 1;
+					counters[thId] += 1;
+					delete[] pass6;
+				}
+			}
+		}
+		if (thId == 7) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "YPGcJKqrNACstuHknETXBW23MD4vym5F9dQ8ZaoVRSghij1Uwefxb67pLz" };
+				int strN = 58;
+				char* pass7 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass7[i] = str[rand() % strN];
+				}
+				pass7[N] = 0;
+
+				std::stringstream ss7;
+				ss7 << seed << pass7 << zez << "?";
+				std::string nkkr7 = ss7.str();
+
+				string nos7 = sha256(nkkr7);
+
+				if (nos7[0] == '0') {
+
+					if (nos7[1] == '0') {
+
+						std::stringstream ss777;
+						ss777 << seed << pass7 << zez;
+						std::string nkkr777 = ss777.str();
+
+						string nos777 = sha256(nkkr777);
+
+						char* cstr777 = &nos777[0];
+						key.SetBase16(cstr777);
+
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters[thId] += 1;
+						delete[] pass7;
+					}
+					else {
+						counters2 += 1;
+						counters[thId] += 1;
+						delete[] pass7;
+					}
+				}
+				else {
+					counters2 += 1;
+					counters[thId] += 1;
+					delete[] pass7;
+				}
+			}
+		}
+		if (thId == 8) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "stuHknyACXm5F9YPGcodQ8ETVBW23RShij1UwefxJKqrgNZab67pLMD4vz" };
+				int strN = 58;
+				char* pass8 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass8[i] = str[rand() % strN];
+				}
+				pass8[N] = 0;
+
+				std::stringstream ss8;
+				ss8 << seed << pass8 << zez << "?";
+				std::string nkkr8 = ss8.str();
+
+				string nos8 = sha256(nkkr8);
+
+				if (nos8[0] == '0') {
+
+					if (nos8[1] == '0') {
+
+						std::stringstream ss888;
+						ss888 << seed << pass8 << zez;
+						std::string nkkr888 = ss888.str();
+
+						string nos888 = sha256(nkkr888);
+
+						char* cstr888 = &nos888[0];
+						key.SetBase16(cstr888);
+
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters[thId] += 1;
+						delete[] pass8;
+					}
+					else {
+						counters2 += 1;
+						counters[thId] += 1;
+						delete[] pass8;
+					}
+				}
+				else {
+					counters2 += 1;
+					counters[thId] += 1;
+					delete[] pass8;
+				}
+			}
+		}
+		if (thId == 9) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "pLMDZab67xJKqrg4vzj1UwefodQ3RSTVBW2hiuHknEXm5Fc89YPGNyACst" };
+				int strN = 58;
+				char* pass9 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass9[i] = str[rand() % strN];
+				}
+				pass9[N] = 0;
+
+				std::stringstream ss9;
+				ss9 << seed << pass9 << zez << "?";
+				std::string nkkr9 = ss9.str();
+
+				string nos9 = sha256(nkkr9);
+
+				if (nos9[0] == '0') {
+
+					if (nos9[1] == '0') {
+
+						std::stringstream ss999;
+						ss999 << seed << pass9 << zez;
+						std::string nkkr999 = ss999.str();
+
+						string nos999 = sha256(nkkr999);
+
+						char* cstr999 = &nos999[0];
+						key.SetBase16(cstr999);
+
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters[thId] += 1;
+						delete[] pass9;
+					}
+					else {
+						counters2 += 1;
+						counters[thId] += 1;
+						delete[] pass9;
+					}
+				}
+				else {
+					counters2 += 1;
+					counters[thId] += 1;
+					delete[] pass9;
+				}
+			}
+		}
+		if (thId == 10) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "hiZab6STVnEXm5Fc8wefxB79pLMD4vzj1UdQ3RW2YPGNyACstuHkJKqrgo" };
+				int strN = 58;
+				char* pass10 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass10[i] = str[rand() % strN];
+				}
+				pass10[N] = 0;
+
+				std::stringstream ss10;
+				ss10 << seed << pass10 << zez << "?";
+				std::string nkkr10 = ss10.str();
+
+				string nos10 = sha256(nkkr10);
+
+				if (nos10[0] == '0') {
+
+					if (nos10[1] == '0') {
+
+						std::stringstream ss1000;
+						ss1000 << seed << pass10 << zez;
+						std::string nkkr1000 = ss1000.str();
+
+						string nos1000 = sha256(nkkr1000);
+
+						char* cstr1000 = &nos1000[0];
+						key.SetBase16(cstr1000);
+
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters[thId] += 1;
+						delete[] pass10;
+					}
+					else {
+						counters2 += 1;
+						counters[thId] += 1;
+						delete[] pass10;
+					}
+				}
+				else {
+					counters2 += 1;
+					counters[thId] += 1;
+					delete[] pass10;
+				}
+			}
+		}
+		if (thId == 11) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "m5Fc8PGNyACstEXKqbuHkJLMD4vzj13RSTVn679YrgowefxBW2hiZpUdQa" };
+				int strN = 58;
+				char* pass11 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass11[i] = str[rand() % strN];
+				}
+				pass11[N] = 0;
+
+				std::stringstream ss11;
+				ss11 << seed << pass11 << zez << "?";
+				std::string nkkr11 = ss11.str();
+
+				string nos11 = sha256(nkkr11);
+
+				if (nos11[0] == '0') {
+
+					if (nos11[1] == '0') {
+
+						std::stringstream ss1111;
+						ss1111 << seed << pass11 << zez;
+						std::string nkkr1111 = ss1111.str();
+
+						string nos1111 = sha256(nkkr1111);
+
+						char* cstr1111 = &nos1111[0];
+						key.SetBase16(cstr1111);
+
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters[thId] += 1;
+						delete[] pass11;
+					}
+					else {
+						counters2 += 1;
+						counters[thId] += 1;
+						delete[] pass11;
+					}
+				}
+				else {
+					counters2 += 1;
+					counters[thId] += 1;
+					delete[] pass11;
+				}
+			}
+		}
+		if (thId > 11) {
+
+			while (1 < 2) {
+
+				int N = nbit;
+				char str[]{ "hiZpmKqLMr1W5Fc8PGNyACstuHkJUdQab6og3R79YnEX2STVD4vzjwefxB" };
+				int strN = 58;
+				char* pass12 = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass12[i] = str[rand() % strN];
+				}
+				pass12[N] = 0;
+
+				std::stringstream ss12;
+				ss12 << seed << pass12 << zez << "?";
+				std::string nkkr12 = ss12.str();
+
+				string nos12 = sha256(nkkr12);
+
+				if (nos12[0] == '0') {
+
+					if (nos12[1] == '0') {
+
+						std::stringstream ss1212;
+						ss1212 << seed << pass12 << zez;
+						std::string nkkr1212 = ss1212.str();
+
+						string nos1212 = sha256(nkkr1212);
+
+						char* cstr1212 = &nos1212[0];
+						key.SetBase16(cstr1212);
+
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters[thId] += 1;
+						delete[] pass12;
+					}
+					else {
+						counters2 += 1;
+						counters[thId] += 1;
+						delete[] pass12;
+					}
+				}
+				else {
+					counters2 += 1;
+					counters[thId] += 1;
+					delete[] pass12;
+				}
+			}
+		}
+	}
+
+	if (rekey == 14) {
+
+		int thId = ph->threadId;
+		counters[thId] = 0;
+
+		Int  key;
+		Point startP;
+
+		string initial;
+		ph->hasStarted = true;
+		ph->rKeyRequest = false;
+		if (thId == 0) {
+			initial = str0;
+		}
+		if (thId == 1) {
+			initial = str1;
+		}
+		if (thId == 2) {
+			initial = str2;
+		}
+		if (thId == 3) {
+			initial = str3;
+		}
+		if (thId == 4) {
+			initial = str4;
+		}
+		if (thId == 5) {
+			initial = str5;
+		}
+		if (thId == 6) {
+			initial = str6;
+		}
+		if (thId == 7) {
+			initial = str7;
+		}
+		if (thId == 8) {
+			initial = str8;
+		}
+		if (thId == 9) {
+			initial = str9;
+		}
+		if (thId == 10) {
+			initial = str10;
+		}
+		if (thId == 11) {
+			initial = str11;
+		}
+		if (thId == 12) {
+			initial = str12;
+		}
+		if (thId == 13) {
+			initial = str13;
+		}
+		if (thId == 14) {
+			initial = str14;
+		}
+		if (thId == 15) {
+			initial = str15;
+		}
+		if (thId == 16) {
+			initial = str16;
+		}
+		if (thId == 17) {
+			initial = str17;
+		}
+		if (thId == 18) {
+			initial = str18;
+		}
+		if (thId == 19) {
+			initial = str19;
+		}
+		if (thId == 20) {
+			initial = str20;
+		}
+		if (thId == 21) {
+			initial = str21;
+		}
+		if (thId == 22) {
+			initial = str22;
+		}
+		if (thId == 23) {
+			initial = str23;
+		}
+		if (thId == 24) {
+			initial = str24;
+		}
+		if (thId == 25) {
+			initial = str25;
+		}
+		if (thId == 26) {
+			initial = str26;
+		}
+		if (thId == 27) {
+			initial = str27;
+		}
+		if (thId == 28) {
+			initial = str28;
+		}
+		if (thId == 29) {
+			initial = str29;
+		}
+		if (thId == 30) {
+			initial = str30;
+		}
+		if (thId == 31) {
+			initial = str31;
+		}
+		if (thId == 32) {
+			initial = str32;
+		}
+		if (thId == 33) {
+			initial = str33;
+		}
+		if (thId == 34) {
+			initial = str34;
+		}
+		if (thId == 35) {
+			initial = str35;
+		}
+		if (thId == 36) {
+			initial = str36;
+		}
+		if (thId == 37) {
+			initial = str37;
+		}
+		if (thId == 38) {
+			initial = str38;
+		}
+		if (thId == 39) {
+			initial = str39;
+		}
+		if (thId == 40) {
+			initial = str40;
+		}
+		if (thId == 41) {
+			initial = str41;
+		}
+		if (thId == 42) {
+			initial = str42;
+		}
+		if (thId == 43) {
+			initial = str43;
+		}
+		if (thId == 44) {
+			initial = str44;
+		}
+		if (thId == 45) {
+			initial = str45;
+		}
+		if (thId == 46) {
+			initial = str46;
+		}
+		if (thId == 47) {
+			initial = str47;
+		}
+		if (thId == 48) {
+			initial = str48;
+		}
+		if (thId == 49) {
+			initial = str49;
+		}
+		if (thId == 50) {
+			initial = str50;
+		}
+		if (thId == 51) {
+			initial = str51;
+		}
+		if (thId == 52) {
+			initial = str52;
+		}
+		if (thId == 53) {
+			initial = str53;
+		}
+		if (thId == 54) {
+			initial = str54;
+		}
+		if (thId == 55) {
+			initial = str55;
+		}
+		if (thId == 56) {
+			initial = str56;
+		}
+		if (thId == 57) {
+			initial = str57;
+		}
+		if (thId == 58) {
+			initial = str58;
+		}
+		if (thId == 59) {
+			initial = str59;
+		}
+		if (thId == 60) {
+			initial = str60;
+		}
+		if (thId == 61) {
+			initial = str61;
+		}
+		if (thId == 62) {
+			initial = str62;
+		}
+		if (thId == 63) {
+			initial = str63;
+		}
+		if (thId == 64) {
+			initial = str64;
+		}
+
+		string str = initial;
+		string last;
+
+		do {
+			last = str;
+			str = increment(last);
+			string input = str;
+			
+			if (zhdat == 60 || zhdat < 1) {
+
+				int asciiArray[256];
+				char ch;
+				int charconv;
+				for (int i = 0; i < 256; i++)
+					asciiArray[i] = 0;
+				for (unsigned int i = 0; i < str.length(); i++)
+				{
+					ch = str[i];
+					charconv = static_cast<int>(ch);
+					asciiArray[charconv]++;
+				}
+
+				for (unsigned int i = 0; i < str.length(); i++)
+				{
+					char static alreadyprinted;
+					char ch = str[i];
+
+					if ((asciiArray[ch] > 2) && (ch != alreadyprinted) && (find(alreadyprintedcharacters.begin(), alreadyprintedcharacters.end(), ch) == alreadyprintedcharacters.end()))
+					{
+						string proverka = str;
+						string proverka1 = regex_replace(proverka, regex("AAA"), "AAB");
+						string proverka2 = regex_replace(proverka1, regex("AAa"), "AAb");
+						string proverka3 = regex_replace(proverka2, regex("Aaa"), "Aab");
+						string proverka4 = regex_replace(proverka3, regex("aaa"), "aab");
+						string proverka5 = regex_replace(proverka4, regex("aaA"), "aaB");
+						string proverka6 = regex_replace(proverka5, regex("aAA"), "aAB");
+						string proverka7 = regex_replace(proverka6, regex("aAa"), "aAb");
+						string proverka8 = regex_replace(proverka7, regex("AaA"), "AaB");
+						string proverka9 = regex_replace(proverka8, regex("BBB"), "BBC");
+						string proverka10 = regex_replace(proverka9, regex("BBb"), "BBc");
+						string proverka11 = regex_replace(proverka10, regex("Bbb"), "Bbc");
+						string proverka12 = regex_replace(proverka11, regex("bbb"), "bbc");
+						string proverka13 = regex_replace(proverka12, regex("bbB"), "bbC");
+						string proverka14 = regex_replace(proverka13, regex("bBB"), "bBC");
+						string proverka15 = regex_replace(proverka14, regex("bBb"), "bBc");
+						string proverka16 = regex_replace(proverka15, regex("BbB"), "BbC");
+						string proverka17 = regex_replace(proverka16, regex("CCC"), "CCD");
+						string proverka18 = regex_replace(proverka17, regex("CCc"), "CCd");
+						string proverka19 = regex_replace(proverka18, regex("Ccc"), "Ccd");
+						string proverka20 = regex_replace(proverka19, regex("ccc"), "ccd");
+						string proverka21 = regex_replace(proverka20, regex("ccC"), "ccD");
+						string proverka22 = regex_replace(proverka21, regex("cCC"), "cCD");
+						string proverka23 = regex_replace(proverka22, regex("cCc"), "cCd");
+						string proverka24 = regex_replace(proverka23, regex("CcC"), "CcD");
+						string proverka25 = regex_replace(proverka24, regex("DDD"), "DDE");
+						string proverka26 = regex_replace(proverka25, regex("DDd"), "DDe");
+						string proverka27 = regex_replace(proverka26, regex("Ddd"), "Dde");
+						string proverka28 = regex_replace(proverka27, regex("ddd"), "dde");
+						string proverka29 = regex_replace(proverka28, regex("ddD"), "ddE");
+						string proverka30 = regex_replace(proverka29, regex("dDD"), "dDE");
+						string proverka31 = regex_replace(proverka30, regex("dDd"), "dDe");
+						string proverka32 = regex_replace(proverka31, regex("DdD"), "DdE");
+						string proverka33 = regex_replace(proverka32, regex("EEE"), "EEF");
+						string proverka34 = regex_replace(proverka33, regex("EEe"), "EEf");
+						string proverka35 = regex_replace(proverka34, regex("Eee"), "Eef");
+						string proverka36 = regex_replace(proverka35, regex("eee"), "eef");
+						string proverka37 = regex_replace(proverka36, regex("eeE"), "eeF");
+						string proverka38 = regex_replace(proverka37, regex("eEE"), "eEF");
+						string proverka39 = regex_replace(proverka38, regex("eEe"), "eEf");
+						string proverka40 = regex_replace(proverka39, regex("EeE"), "EeF");
+						string proverka41 = regex_replace(proverka40, regex("FFF"), "FFG");
+						string proverka42 = regex_replace(proverka41, regex("FFf"), "FFg");
+						string proverka43 = regex_replace(proverka42, regex("Fff"), "Ffg");
+						string proverka44 = regex_replace(proverka43, regex("fff"), "ffg");
+						string proverka45 = regex_replace(proverka44, regex("ffF"), "ffG");
+						string proverka46 = regex_replace(proverka45, regex("fFF"), "fFG");
+						string proverka47 = regex_replace(proverka46, regex("fFf"), "fFg");
+						string proverka48 = regex_replace(proverka47, regex("FfF"), "FfG");
+						string proverka49 = regex_replace(proverka48, regex("GGG"), "GGH");
+						string proverka50 = regex_replace(proverka49, regex("GGg"), "GGh");
+						string proverka51 = regex_replace(proverka50, regex("Ggg"), "Ggh");
+						string proverka52 = regex_replace(proverka51, regex("ggg"), "ggh");
+						string proverka53 = regex_replace(proverka52, regex("ggG"), "ggH");
+						string proverka54 = regex_replace(proverka53, regex("gGG"), "gGH");
+						string proverka55 = regex_replace(proverka54, regex("gGg"), "gGh");
+						string proverka56 = regex_replace(proverka55, regex("GgG"), "GgH");
+						string proverka57 = regex_replace(proverka56, regex("HHH"), "HHI");
+						string proverka58 = regex_replace(proverka57, regex("HHh"), "HHi");
+						string proverka59 = regex_replace(proverka58, regex("Hhh"), "Hhi");
+						string proverka60 = regex_replace(proverka59, regex("hhh"), "hhi");
+						string proverka61 = regex_replace(proverka60, regex("hhH"), "hhI");
+						string proverka62 = regex_replace(proverka61, regex("hHH"), "hHI");
+						string proverka63 = regex_replace(proverka62, regex("hHh"), "hHi");
+						string proverka64 = regex_replace(proverka63, regex("HhH"), "HhI");
+						string proverka65 = regex_replace(proverka64, regex("III"), "IIJ");
+						string proverka66 = regex_replace(proverka65, regex("IIi"), "IIj");
+						string proverka67 = regex_replace(proverka66, regex("Iii"), "Iij");
+						string proverka68 = regex_replace(proverka67, regex("iii"), "iij");
+						string proverka69 = regex_replace(proverka68, regex("iiI"), "iiJ");
+						string proverka70 = regex_replace(proverka69, regex("iII"), "iIJ");
+						string proverka71 = regex_replace(proverka70, regex("iIi"), "iIj");
+						string proverka72 = regex_replace(proverka71, regex("IiI"), "IiJ");
+						string proverka73 = regex_replace(proverka72, regex("JJJ"), "JJK");
+						string proverka74 = regex_replace(proverka73, regex("JJj"), "JJk");
+						string proverka75 = regex_replace(proverka74, regex("Jjj"), "Jjk");
+						string proverka76 = regex_replace(proverka75, regex("jjj"), "jjk");
+						string proverka77 = regex_replace(proverka76, regex("jjJ"), "jjK");
+						string proverka78 = regex_replace(proverka77, regex("jJJ"), "jJK");
+						string proverka79 = regex_replace(proverka78, regex("jJj"), "jJk");
+						string proverka80 = regex_replace(proverka79, regex("JjJ"), "JjK");
+						string proverka81 = regex_replace(proverka80, regex("KKK"), "KKL");
+						string proverka82 = regex_replace(proverka81, regex("KKk"), "KKl");
+						string proverka83 = regex_replace(proverka82, regex("Kkk"), "Kkl");
+						string proverka84 = regex_replace(proverka83, regex("kkk"), "kkl");
+						string proverka85 = regex_replace(proverka84, regex("kkK"), "kkL");
+						string proverka86 = regex_replace(proverka85, regex("kKK"), "kKL");
+						string proverka87 = regex_replace(proverka86, regex("kKk"), "kKl");
+						string proverka88 = regex_replace(proverka87, regex("KkK"), "KkL");
+						string proverka89 = regex_replace(proverka88, regex("LLL"), "LLM");
+						string proverka90 = regex_replace(proverka89, regex("LLl"), "LLm");
+						string proverka91 = regex_replace(proverka90, regex("Lll"), "Llm");
+						string proverka92 = regex_replace(proverka91, regex("lll"), "llm");
+						string proverka93 = regex_replace(proverka92, regex("llL"), "llM");
+						string proverka94 = regex_replace(proverka93, regex("lLL"), "lLM");
+						string proverka95 = regex_replace(proverka94, regex("lLl"), "lLm");
+						string proverka96 = regex_replace(proverka95, regex("LlL"), "LlM");
+						string proverka97 = regex_replace(proverka96, regex("MMM"), "MMN");
+						string proverka98 = regex_replace(proverka97, regex("MMm"), "MMn");
+						string proverka99 = regex_replace(proverka98, regex("Mmm"), "Mmn");
+						string proverka100 = regex_replace(proverka99, regex("mmm"), "mmn");
+						string proverka101 = regex_replace(proverka100, regex("mmM"), "mmN");
+						string proverka102 = regex_replace(proverka101, regex("mMM"), "mMN");
+						string proverka103 = regex_replace(proverka102, regex("mMm"), "mMn");
+						string proverka104 = regex_replace(proverka103, regex("MmM"), "MmN");
+						string proverka105 = regex_replace(proverka104, regex("NNN"), "NNO");
+						string proverka106 = regex_replace(proverka105, regex("NNn"), "NNo");
+						string proverka107 = regex_replace(proverka106, regex("Nnn"), "Nno");
+						string proverka108 = regex_replace(proverka107, regex("nnn"), "nno");
+						string proverka109 = regex_replace(proverka108, regex("nnN"), "nnO");
+						string proverka110 = regex_replace(proverka109, regex("nNN"), "nNO");
+						string proverka111 = regex_replace(proverka110, regex("nNn"), "nNo");
+						string proverka112 = regex_replace(proverka111, regex("NnN"), "NnO");
+						string proverka113 = regex_replace(proverka112, regex("OOO"), "OOP");
+						string proverka114 = regex_replace(proverka113, regex("OOo"), "OOp");
+						string proverka115 = regex_replace(proverka114, regex("Ooo"), "Oop");
+						string proverka116 = regex_replace(proverka115, regex("ooo"), "oop");
+						string proverka117 = regex_replace(proverka116, regex("ooO"), "ooP");
+						string proverka118 = regex_replace(proverka117, regex("oOO"), "oOP");
+						string proverka119 = regex_replace(proverka118, regex("oOo"), "oOp");
+						string proverka120 = regex_replace(proverka119, regex("OoO"), "OoP");
+						string proverka121 = regex_replace(proverka120, regex("PPP"), "PPQ");
+						string proverka122 = regex_replace(proverka121, regex("PPp"), "PPq");
+						string proverka123 = regex_replace(proverka122, regex("Ppp"), "Ppq");
+						string proverka124 = regex_replace(proverka123, regex("ppp"), "ppq");
+						string proverka125 = regex_replace(proverka124, regex("ppP"), "ppQ");
+						string proverka126 = regex_replace(proverka125, regex("pPP"), "pPQ");
+						string proverka127 = regex_replace(proverka126, regex("pPp"), "pPq");
+						string proverka128 = regex_replace(proverka127, regex("PpP"), "PpQ");
+						string proverka129 = regex_replace(proverka128, regex("QQQ"), "QQR");
+						string proverka130 = regex_replace(proverka129, regex("QQq"), "QQr");
+						string proverka131 = regex_replace(proverka130, regex("Qqq"), "Qqr");
+						string proverka132 = regex_replace(proverka131, regex("qqq"), "qqr");
+						string proverka133 = regex_replace(proverka132, regex("qqQ"), "qqR");
+						string proverka134 = regex_replace(proverka133, regex("qQQ"), "qQR");
+						string proverka135 = regex_replace(proverka134, regex("qQq"), "qQr");
+						string proverka136 = regex_replace(proverka135, regex("QqQ"), "QqR");
+						string proverka137 = regex_replace(proverka136, regex("RRR"), "RRS");
+						string proverka138 = regex_replace(proverka137, regex("RRr"), "RRs");
+						string proverka139 = regex_replace(proverka138, regex("Rrr"), "Rrs");
+						string proverka140 = regex_replace(proverka139, regex("rrr"), "rrs");
+						string proverka141 = regex_replace(proverka140, regex("rrR"), "rrS");
+						string proverka142 = regex_replace(proverka141, regex("rRR"), "rRS");
+						string proverka143 = regex_replace(proverka142, regex("rRr"), "rRs");
+						string proverka144 = regex_replace(proverka143, regex("RrR"), "RrS");
+						string proverka145 = regex_replace(proverka144, regex("SSS"), "SST");
+						string proverka146 = regex_replace(proverka145, regex("SSs"), "SSt");
+						string proverka147 = regex_replace(proverka146, regex("Sss"), "Sst");
+						string proverka148 = regex_replace(proverka147, regex("sss"), "sst");
+						string proverka149 = regex_replace(proverka148, regex("ssS"), "ssT");
+						string proverka150 = regex_replace(proverka149, regex("sSS"), "sST");
+						string proverka151 = regex_replace(proverka150, regex("sSs"), "sSt");
+						string proverka152 = regex_replace(proverka151, regex("SsS"), "SsT");
+						string proverka153 = regex_replace(proverka152, regex("TTT"), "TTU");
+						string proverka154 = regex_replace(proverka153, regex("TTt"), "TTu");
+						string proverka155 = regex_replace(proverka154, regex("Ttt"), "Ttu");
+						string proverka156 = regex_replace(proverka155, regex("ttt"), "ttu");
+						string proverka157 = regex_replace(proverka156, regex("ttT"), "ttU");
+						string proverka158 = regex_replace(proverka157, regex("tTT"), "tTU");
+						string proverka159 = regex_replace(proverka158, regex("tTt"), "tTu");
+						string proverka160 = regex_replace(proverka159, regex("TtT"), "TtU");
+						string proverka161 = regex_replace(proverka160, regex("UUU"), "UUV");
+						string proverka162 = regex_replace(proverka161, regex("UUu"), "UUv");
+						string proverka163 = regex_replace(proverka162, regex("Uuu"), "Uvv");
+						string proverka164 = regex_replace(proverka163, regex("uuu"), "uuv");
+						string proverka165 = regex_replace(proverka164, regex("uuU"), "uuV");
+						string proverka166 = regex_replace(proverka165, regex("uUU"), "uUV");
+						string proverka167 = regex_replace(proverka166, regex("uUu"), "uUv");
+						string proverka168 = regex_replace(proverka167, regex("UuU"), "UuV");
+						string proverka169 = regex_replace(proverka168, regex("VVV"), "VVW");
+						string proverka170 = regex_replace(proverka169, regex("VVv"), "VVw");
+						string proverka171 = regex_replace(proverka170, regex("Vvv"), "Vvw");
+						string proverka172 = regex_replace(proverka171, regex("vvv"), "vvw");
+						string proverka173 = regex_replace(proverka172, regex("vvV"), "vvW");
+						string proverka174 = regex_replace(proverka173, regex("vVV"), "vVW");
+						string proverka175 = regex_replace(proverka174, regex("vVv"), "vVw");
+						string proverka176 = regex_replace(proverka175, regex("VvV"), "VvW");
+						string proverka177 = regex_replace(proverka176, regex("WWW"), "WWX");
+						string proverka178 = regex_replace(proverka177, regex("WWw"), "WWx");
+						string proverka179 = regex_replace(proverka178, regex("Www"), "Wwx");
+						string proverka180 = regex_replace(proverka179, regex("www"), "wwx");
+						string proverka181 = regex_replace(proverka180, regex("wwW"), "wwX");
+						string proverka182 = regex_replace(proverka181, regex("wWW"), "wWX");
+						string proverka183 = regex_replace(proverka182, regex("wWw"), "wWx");
+						string proverka184 = regex_replace(proverka183, regex("WwW"), "WwX");
+						string proverka185 = regex_replace(proverka184, regex("XXX"), "XXY");
+						string proverka186 = regex_replace(proverka185, regex("XXx"), "XXy");
+						string proverka187 = regex_replace(proverka186, regex("Xxx"), "Xxy");
+						string proverka188 = regex_replace(proverka187, regex("xxx"), "xxy");
+						string proverka189 = regex_replace(proverka188, regex("xxX"), "xxY");
+						string proverka190 = regex_replace(proverka189, regex("xXX"), "xXY");
+						string proverka191 = regex_replace(proverka190, regex("xXx"), "xXy");
+						string proverka192 = regex_replace(proverka191, regex("XxX"), "XxY");
+						string proverka193 = regex_replace(proverka192, regex("YYY"), "YYZ");
+						string proverka194 = regex_replace(proverka193, regex("YYy"), "YYz");
+						string proverka195 = regex_replace(proverka194, regex("Yyy"), "Yyz");
+						string proverka196 = regex_replace(proverka195, regex("yyy"), "yyz");
+						string proverka197 = regex_replace(proverka196, regex("yyY"), "yyZ");
+						string proverka198 = regex_replace(proverka197, regex("yYY"), "yYZ");
+						string proverka199 = regex_replace(proverka198, regex("yYy"), "yYz");
+						string proverka200 = regex_replace(proverka199, regex("YyY"), "YyZ");
+						zhdat = 1;
+						kusok += 1;
+						if (proverka200 != str) {
+							std::stringstream sst;
+							sst << "  Filter 3 litters Replace : " << str << "  ->  " << proverka200 << " Total: " << kusok;
+							std::string zamena = sst.str();
+							SetConsoleTitle(zamena.c_str());
+							str = proverka200;
+						}
+					}
+				}
+			}
+
+			if (thId == 0) {
+
+				str0 = str;
+				std::stringstream ss;
+				ss << str << kstr0;
+				std::string priv0 = ss.str();
+				input1 = priv0;
+				char* key0000 = &priv0[0];
+				bool* compressed;
+				Int ret0000;
+				ret0000.SetInt32(0);
+				std::vector<unsigned char> privKey0;
+
+				if (key0000[0] == '5') {
+
+					DecodeBase58(key0000, privKey0);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 33, c);
+
+					if (c[0] != privKey0[33] || c[1] != privKey0[34] ||
+						c[2] != privKey0[35] || c[3] != privKey0[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+				if (key0000[0] == 'K' || key0000[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0000, privKey0);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 34, c);
+
+					if (c[0] != privKey0[34] || c[1] != privKey0[35] ||
+						c[2] != privKey0[36] || c[3] != privKey0[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+			}
+			if (thId == 1) {
+				str1 = str;
+				std::stringstream ss;
+				ss << str << kstr1;
+				std::string priv1 = ss.str();
+
+				char* key0001 = &priv1[0];
+				bool* compressed;
+				Int ret0001;
+				ret0001.SetInt32(0);
+				std::vector<unsigned char> privKey1;
+
+				if (key0001[0] == '5') {
+
+					DecodeBase58(key0001, privKey1);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0001.SetByte(count--, privKey1[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey1.data(), 33, c);
+
+					if (c[0] != privKey1[33] || c[1] != privKey1[34] ||
+						c[2] != privKey1[35] || c[3] != privKey1[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0001;
+						kisa1.Set(&key);
+						input1 = priv1;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv1.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+				if (key0001[0] == 'K' || key0001[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0001, privKey1);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0001.SetByte(count--, privKey1[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey1.data(), 34, c);
+
+					if (c[0] != privKey1[34] || c[1] != privKey1[35] ||
+						c[2] != privKey1[36] || c[3] != privKey1[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0001;
+						kisa1.Set(&key);
+						input1 = priv1;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv1.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+			}
+			if (thId == 2) {
+
+				str2 = str;
+				std::stringstream ss;
+				ss << str << kstr2;
+				std::string priv2 = ss.str();
+
+				char* key0002 = &priv2[0];
+				bool* compressed;
+				Int ret0002;
+				ret0002.SetInt32(0);
+				std::vector<unsigned char> privKey2;
+
+				if (key0002[0] == '5') {
+
+					DecodeBase58(key0002, privKey2);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0002.SetByte(count--, privKey2[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey2.data(), 33, c);
+
+					if (c[0] != privKey2[33] || c[1] != privKey2[34] ||
+						c[2] != privKey2[35] || c[3] != privKey2[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0002;
+						kisa2.Set(&key);
+						input1 = priv2;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv2.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+				if (key0002[0] == 'K' || key0002[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0002, privKey2);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0002.SetByte(count--, privKey2[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey2.data(), 34, c);
+
+					if (c[0] != privKey2[34] || c[1] != privKey2[35] ||
+						c[2] != privKey2[36] || c[3] != privKey2[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0002;
+						kisa2.Set(&key);
+						input1 = priv2;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv2.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+			}
+			if (thId == 3) {
+
+				str3 = str;
+				std::stringstream ss;
+				ss << str << kstr3;
+				std::string priv3 = ss.str();
+
+				char* key0003 = &priv3[0];
+				bool* compressed;
+				Int ret0003;
+				ret0003.SetInt32(0);
+				std::vector<unsigned char> privKey3;
+
+				if (key0003[0] == '5') {
+
+					DecodeBase58(key0003, privKey3);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0003.SetByte(count--, privKey3[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey3.data(), 33, c);
+
+					if (c[0] != privKey3[33] || c[1] != privKey3[34] ||
+						c[2] != privKey3[35] || c[3] != privKey3[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0003;
+						kisa3.Set(&key);
+						input1 = priv3;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv3.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+				if (key0003[0] == 'K' || key0003[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0003, privKey3);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0003.SetByte(count--, privKey3[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey3.data(), 34, c);
+
+					if (c[0] != privKey3[34] || c[1] != privKey3[35] ||
+						c[2] != privKey3[36] || c[3] != privKey3[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0003;
+						kisa3.Set(&key);
+						input1 = priv3;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv3.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+			}
+			if (thId == 4) {
+
+				str4 = str;
+				std::stringstream ss;
+				ss << str << kstr4;
+				std::string priv4 = ss.str();
+
+				char* key0004 = &priv4[0];
+				bool* compressed;
+				Int ret0004;
+				ret0004.SetInt32(0);
+				std::vector<unsigned char> privKey4;
+
+				if (key0004[0] == '5') {
+
+					DecodeBase58(key0004, privKey4);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0004.SetByte(count--, privKey4[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey4.data(), 33, c);
+
+					if (c[0] != privKey4[33] || c[1] != privKey4[34] ||
+						c[2] != privKey4[35] || c[3] != privKey4[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0004;
+						kisa4.Set(&key);
+						input1 = priv4;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv4.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+				if (key0004[0] == 'K' || key0004[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0004, privKey4);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0004.SetByte(count--, privKey4[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey4.data(), 34, c);
+
+					if (c[0] != privKey4[34] || c[1] != privKey4[35] ||
+						c[2] != privKey4[36] || c[3] != privKey4[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0004;
+						kisa4.Set(&key);
+						input1 = priv4;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv4.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+			}
+			if (thId == 5) {
+
+				str5 = str;
+				std::stringstream ss;
+				ss << str << kstr5;
+				std::string priv5 = ss.str();
+
+				char* key0005 = &priv5[0];
+				bool* compressed;
+				Int ret0005;
+				ret0005.SetInt32(0);
+				std::vector<unsigned char> privKey5;
+
+				if (key0005[0] == '5') {
+
+					DecodeBase58(key0005, privKey5);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0005.SetByte(count--, privKey5[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey5.data(), 33, c);
+
+					if (c[0] != privKey5[33] || c[1] != privKey5[34] ||
+						c[2] != privKey5[35] || c[3] != privKey5[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0005;
+						kisa5.Set(&key);
+						input1 = priv5;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv5.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+				if (key0005[0] == 'K' || key0005[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0005, privKey5);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0005.SetByte(count--, privKey5[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey5.data(), 34, c);
+
+					if (c[0] != privKey5[34] || c[1] != privKey5[35] ||
+						c[2] != privKey5[36] || c[3] != privKey5[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0005;
+						kisa5.Set(&key);
+						input1 = priv5;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv5.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+			}
+			if (thId == 6) {
+
+				str6 = str;
+				std::stringstream ss;
+				ss << str << kstr6;
+				std::string priv6 = ss.str();
+
+				char* key0006 = &priv6[0];
+				bool* compressed;
+				Int ret0006;
+				ret0006.SetInt32(0);
+				std::vector<unsigned char> privKey6;
+
+				if (key0006[0] == '5') {
+
+					DecodeBase58(key0006, privKey6);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0006.SetByte(count--, privKey6[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey6.data(), 33, c);
+
+					if (c[0] != privKey6[33] || c[1] != privKey6[34] ||
+						c[2] != privKey6[35] || c[3] != privKey6[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0006;
+						kisa6.Set(&key);
+						input1 = priv6;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv6.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+				if (key0006[0] == 'K' || key0006[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0006, privKey6);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0006.SetByte(count--, privKey6[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey6.data(), 34, c);
+
+					if (c[0] != privKey6[34] || c[1] != privKey6[35] ||
+						c[2] != privKey6[36] || c[3] != privKey6[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0006;
+						kisa6.Set(&key);
+						input1 = priv6;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv6.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+			}
+			if (thId == 7) {
+
+				str7 = str;
+				std::stringstream ss;
+				ss << str << kstr7;
+				std::string priv7 = ss.str();
+
+				char* key0007 = &priv7[0];
+				bool* compressed;
+				Int ret0007;
+				ret0007.SetInt32(0);
+				std::vector<unsigned char> privKey7;
+
+				if (key0007[0] == '5') {
+
+					DecodeBase58(key0007, privKey7);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0007.SetByte(count--, privKey7[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey7.data(), 33, c);
+
+					if (c[0] != privKey7[33] || c[1] != privKey7[34] ||
+						c[2] != privKey7[35] || c[3] != privKey7[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0007;
+						kisa7.Set(&key);
+						input1 = priv7;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv7.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+				if (key0007[0] == 'K' || key0007[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0007, privKey7);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0007.SetByte(count--, privKey7[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey7.data(), 34, c);
+
+					if (c[0] != privKey7[34] || c[1] != privKey7[35] ||
+						c[2] != privKey7[36] || c[3] != privKey7[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0007;
+						kisa7.Set(&key);
+						input1 = priv7;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv7.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+			}
+			if (thId == 8) {
+
+				str8 = str;
+				std::stringstream ss;
+				ss << str << kstr8;
+				std::string priv8 = ss.str();
+
+				char* key0008 = &priv8[0];
+				bool* compressed;
+				Int ret0008;
+				ret0008.SetInt32(0);
+				std::vector<unsigned char> privKey8;
+
+				if (key0008[0] == '5') {
+
+					DecodeBase58(key0008, privKey8);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0008.SetByte(count--, privKey8[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey8.data(), 33, c);
+
+					if (c[0] != privKey8[33] || c[1] != privKey8[34] ||
+						c[2] != privKey8[35] || c[3] != privKey8[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0008;
+						kisa8.Set(&key);
+						input1 = priv8;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv8.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+				if (key0008[0] == 'K' || key0008[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0008, privKey8);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0008.SetByte(count--, privKey8[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey8.data(), 34, c);
+
+					if (c[0] != privKey8[34] || c[1] != privKey8[35] ||
+						c[2] != privKey8[36] || c[3] != privKey8[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0008;
+						kisa8.Set(&key);
+						input1 = priv8;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv8.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+			}
+			if (thId == 9) {
+
+				str9 = str;
+				std::stringstream ss;
+				ss << str << kstr9;
+				std::string priv9 = ss.str();
+
+				char* key0009 = &priv9[0];
+				bool* compressed;
+				Int ret0009;
+				ret0009.SetInt32(0);
+				std::vector<unsigned char> privKey9;
+
+				if (key0009[0] == '5') {
+
+					DecodeBase58(key0009, privKey9);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0009.SetByte(count--, privKey9[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey9.data(), 33, c);
+
+					if (c[0] != privKey9[33] || c[1] != privKey9[34] ||
+						c[2] != privKey9[35] || c[3] != privKey9[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0009;
+						kisa9.Set(&key);
+						input1 = priv9;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv9.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+				if (key0009[0] == 'K' || key0009[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0009, privKey9);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0009.SetByte(count--, privKey9[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey9.data(), 34, c);
+
+					if (c[0] != privKey9[34] || c[1] != privKey9[35] ||
+						c[2] != privKey9[36] || c[3] != privKey9[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0009;
+						kisa9.Set(&key);
+						input1 = priv9;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv9.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+			}
+			if (thId == 10) {
+
+				str10 = str;
+				std::stringstream ss;
+				ss << str << kstr10;
+				std::string priv10 = ss.str();
+
+				char* key0010 = &priv10[0];
+				bool* compressed;
+				Int ret0010;
+				ret0010.SetInt32(0);
+				std::vector<unsigned char> privKey10;
+
+				if (key0010[0] == '5') {
+
+					DecodeBase58(key0010, privKey10);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0010.SetByte(count--, privKey10[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey10.data(), 33, c);
+
+					if (c[0] != privKey10[33] || c[1] != privKey10[34] ||
+						c[2] != privKey10[35] || c[3] != privKey10[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0010;
+						kisa10.Set(&key);
+						input1 = priv10;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv10.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+				if (key0010[0] == 'K' || key0010[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0010, privKey10);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0010.SetByte(count--, privKey10[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey10.data(), 34, c);
+
+					if (c[0] != privKey10[34] || c[1] != privKey10[35] ||
+						c[2] != privKey10[36] || c[3] != privKey10[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0010;
+						kisa10.Set(&key);
+						input1 = priv10;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv10.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+			}
+			if (thId == 11) {
+
+				str11 = str;
+				std::stringstream ss;
+				ss << str << kstr11;
+				std::string priv11 = ss.str();
+
+				char* key0011 = &priv11[0];
+				bool* compressed;
+				Int ret0011;
+				ret0011.SetInt32(0);
+				std::vector<unsigned char> privKey11;
+
+				if (key0011[0] == '5') {
+
+					DecodeBase58(key0011, privKey11);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0011.SetByte(count--, privKey11[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey11.data(), 33, c);
+
+					if (c[0] != privKey11[33] || c[1] != privKey11[34] ||
+						c[2] != privKey11[35] || c[3] != privKey11[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0011;
+						kisa11.Set(&key);
+						input1 = priv11;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv11.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+				if (key0011[0] == 'K' || key0011[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0011, privKey11);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0011.SetByte(count--, privKey11[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey11.data(), 34, c);
+
+					if (c[0] != privKey11[34] || c[1] != privKey11[35] ||
+						c[2] != privKey11[36] || c[3] != privKey11[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0011;
+						kisa11.Set(&key);
+						input1 = priv11;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv11.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+			}
+	
+
+
+		} while (compare(last, str));
+	}
+
+	if (rekey == 15) {
+		
+		int thId = ph->threadId;
+		counters[thId] = 0;
+
+		Int  key;
+		Point startP;
+		srand(time(0));
+		ph->hasStarted = true;
+		ph->rKeyRequest = false;
+
+		while (1 < 2) {
+
+			if (thId == 0) {
+				int N = nbit;
+				char str[]{ "jkmnopqrstuvwxyz12345ABCDEFGHJKLMNPQRSTUVWXYZabcdefghi6789" };
+				int strN = 58;
+				char* pass = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass[i] = str[rand() % strN];
+				}
+				pass[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass << zez;
+				std::string priv0 = ss.str();
+
+				input1 = priv0;
+				char* key0000 = &priv0[0];
+				bool* compressed;
+				Int ret0000;
+				ret0000.SetInt32(0);
+				std::vector<unsigned char> privKey0;
+
+				if (key0000[0] == '5') {
+
+					DecodeBase58(key0000, privKey0);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 33, c);
+
+					if (c[0] != privKey0[33] || c[1] != privKey0[34] ||
+						c[2] != privKey0[35] || c[3] != privKey0[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+
+				if (key0000[0] == 'K' || key0000[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0000, privKey0);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 34, c);
+
+					if (c[0] != privKey0[34] || c[1] != privKey0[35] ||
+						c[2] != privKey0[36] || c[3] != privKey0[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+
+			}
+			if (thId == 1) {
+				int N = nbit;
+				char str[]{ "RSTUVWXYZabcdefghijkmNPQpqrstuvwxyz1234567noABCDEFGHJKLM89" };
+				int strN = 58;
+				char* pass = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass[i] = str[rand() % strN];
+				}
+				pass[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass << zez;
+				std::string priv0 = ss.str();
+
+				input1 = priv0;
+				char* key0000 = &priv0[0];
+				bool* compressed;
+				Int ret0000;
+				ret0000.SetInt32(0);
+				std::vector<unsigned char> privKey0;
+
+				if (key0000[0] == '5') {
+
+					DecodeBase58(key0000, privKey0);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 33, c);
+
+					if (c[0] != privKey0[33] || c[1] != privKey0[34] ||
+						c[2] != privKey0[35] || c[3] != privKey0[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+
+				if (key0000[0] == 'K' || key0000[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0000, privKey0);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 34, c);
+
+					if (c[0] != privKey0[34] || c[1] != privKey0[35] ||
+						c[2] != privKey0[36] || c[3] != privKey0[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+
+			}
+			if (thId == 2) {
+				int N = nbit;
+				char str[]{ "defghijkm56789nopqrstuvwGHJKLMNPQRSTUVWXYZabcxyz1234ABCDEF" };
+				int strN = 58;
+				char* pass = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass[i] = str[rand() % strN];
+				}
+				pass[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass << zez;
+				std::string priv0 = ss.str();
+
+				input1 = priv0;
+				char* key0000 = &priv0[0];
+				bool* compressed;
+				Int ret0000;
+				ret0000.SetInt32(0);
+				std::vector<unsigned char> privKey0;
+
+				if (key0000[0] == '5') {
+
+					DecodeBase58(key0000, privKey0);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 33, c);
+
+					if (c[0] != privKey0[33] || c[1] != privKey0[34] ||
+						c[2] != privKey0[35] || c[3] != privKey0[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+
+				if (key0000[0] == 'K' || key0000[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0000, privKey0);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 34, c);
+
+					if (c[0] != privKey0[34] || c[1] != privKey0[35] ||
+						c[2] != privKey0[36] || c[3] != privKey0[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+
+			}
+			if (thId == 3) {
+				int N = nbit;
+				char str[]{ "UVWABCDEFGHJKLstuvwxyz123MNPQRopqr456STXYZabcdefghijkmn789" };
+				int strN = 58;
+				char* pass = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass[i] = str[rand() % strN];
+				}
+				pass[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass << zez;
+				std::string priv0 = ss.str();
+
+				input1 = priv0;
+				char* key0000 = &priv0[0];
+				bool* compressed;
+				Int ret0000;
+				ret0000.SetInt32(0);
+				std::vector<unsigned char> privKey0;
+
+				if (key0000[0] == '5') {
+
+					DecodeBase58(key0000, privKey0);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 33, c);
+
+					if (c[0] != privKey0[33] || c[1] != privKey0[34] ||
+						c[2] != privKey0[35] || c[3] != privKey0[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+
+				if (key0000[0] == 'K' || key0000[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0000, privKey0);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 34, c);
+
+					if (c[0] != privKey0[34] || c[1] != privKey0[35] ||
+						c[2] != privKey0[36] || c[3] != privKey0[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+
+			}
+			if (thId == 4) {
+				int N = nbit;
+				char str[]{ "qrstuvwGHJKLMNPQRSxyz12345ABCDEFTUVWXYZabcdefghijkmnop6789" };
+				int strN = 58;
+				char* pass = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass[i] = str[rand() % strN];
+				}
+				pass[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass << zez;
+				std::string priv0 = ss.str();
+
+				input1 = priv0;
+				char* key0000 = &priv0[0];
+				bool* compressed;
+				Int ret0000;
+				ret0000.SetInt32(0);
+				std::vector<unsigned char> privKey0;
+
+				if (key0000[0] == '5') {
+
+					DecodeBase58(key0000, privKey0);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 33, c);
+
+					if (c[0] != privKey0[33] || c[1] != privKey0[34] ||
+						c[2] != privKey0[35] || c[3] != privKey0[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+
+				if (key0000[0] == 'K' || key0000[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0000, privKey0);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 34, c);
+
+					if (c[0] != privKey0[34] || c[1] != privKey0[35] ||
+						c[2] != privKey0[36] || c[3] != privKey0[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+
+			}
+			if (thId == 5) {
+				int N = nbit;
+				char str[]{ "pqrstuvCDEFGHJKLMNPQRSTUVWwxyz1234ABXYZabcdefghijkmno56789" };
+				int strN = 58;
+				char* pass = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass[i] = str[rand() % strN];
+				}
+				pass[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass << zez;
+				std::string priv0 = ss.str();
+
+				input1 = priv0;
+				char* key0000 = &priv0[0];
+				bool* compressed;
+				Int ret0000;
+				ret0000.SetInt32(0);
+				std::vector<unsigned char> privKey0;
+
+				if (key0000[0] == '5') {
+
+					DecodeBase58(key0000, privKey0);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 33, c);
+
+					if (c[0] != privKey0[33] || c[1] != privKey0[34] ||
+						c[2] != privKey0[35] || c[3] != privKey0[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+
+				if (key0000[0] == 'K' || key0000[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0000, privKey0);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 34, c);
+
+					if (c[0] != privKey0[34] || c[1] != privKey0[35] ||
+						c[2] != privKey0[36] || c[3] != privKey0[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+
+			}
+			if (thId == 6) {
+				int N = nbit;
+				char str[]{ "RSwxyz1234TUefghijkmnopqrsABCVWXYZabcdDEFGHJKLMNPQtuv56789" };
+				int strN = 58;
+				char* pass = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass[i] = str[rand() % strN];
+				}
+				pass[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass << zez;
+				std::string priv0 = ss.str();
+
+				input1 = priv0;
+				char* key0000 = &priv0[0];
+				bool* compressed;
+				Int ret0000;
+				ret0000.SetInt32(0);
+				std::vector<unsigned char> privKey0;
+
+				if (key0000[0] == '5') {
+
+					DecodeBase58(key0000, privKey0);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 33, c);
+
+					if (c[0] != privKey0[33] || c[1] != privKey0[34] ||
+						c[2] != privKey0[35] || c[3] != privKey0[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+
+				if (key0000[0] == 'K' || key0000[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0000, privKey0);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 34, c);
+
+					if (c[0] != privKey0[34] || c[1] != privKey0[35] ||
+						c[2] != privKey0[36] || c[3] != privKey0[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+
+			}
+			if (thId == 7) {
+				int N = nbit;
+				char str[]{ "RSHJKLMNPQdefghijkmnTUVqrstuvwxyz12345WXYZabcABCDEFGop6789" };
+				int strN = 58;
+				char* pass = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass[i] = str[rand() % strN];
+				}
+				pass[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass << zez;
+				std::string priv0 = ss.str();
+
+				input1 = priv0;
+				char* key0000 = &priv0[0];
+				bool* compressed;
+				Int ret0000;
+				ret0000.SetInt32(0);
+				std::vector<unsigned char> privKey0;
+
+				if (key0000[0] == '5') {
+
+					DecodeBase58(key0000, privKey0);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 33, c);
+
+					if (c[0] != privKey0[33] || c[1] != privKey0[34] ||
+						c[2] != privKey0[35] || c[3] != privKey0[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+
+				if (key0000[0] == 'K' || key0000[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0000, privKey0);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 34, c);
+
+					if (c[0] != privKey0[34] || c[1] != privKey0[35] ||
+						c[2] != privKey0[36] || c[3] != privKey0[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+
+			}
+			if (thId == 8) {
+				int N = nbit;
+				char str[]{ "KLMNPQRBstuvwxyz123456CDEFGHJabcdefghijkmnoSTUVWXYZApqr789" };
+				int strN = 58;
+				char* pass = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass[i] = str[rand() % strN];
+				}
+				pass[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass << zez;
+				std::string priv0 = ss.str();
+
+				input1 = priv0;
+				char* key0000 = &priv0[0];
+				bool* compressed;
+				Int ret0000;
+				ret0000.SetInt32(0);
+				std::vector<unsigned char> privKey0;
+
+				if (key0000[0] == '5') {
+
+					DecodeBase58(key0000, privKey0);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 33, c);
+
+					if (c[0] != privKey0[33] || c[1] != privKey0[34] ||
+						c[2] != privKey0[35] || c[3] != privKey0[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+
+				if (key0000[0] == 'K' || key0000[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0000, privKey0);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 34, c);
+
+					if (c[0] != privKey0[34] || c[1] != privKey0[35] ||
+						c[2] != privKey0[36] || c[3] != privKey0[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+
+			}
+			if (thId == 9) {
+				int N = nbit;
+				char str[]{ "bcdefghijz1oQRSTUV2345pqABCDEFkmnWXYZarstuvwxyGHJKLMNP6789" };
+				int strN = 58;
+				char* pass = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass[i] = str[rand() % strN];
+				}
+				pass[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass << zez;
+				std::string priv0 = ss.str();
+
+				input1 = priv0;
+				char* key0000 = &priv0[0];
+				bool* compressed;
+				Int ret0000;
+				ret0000.SetInt32(0);
+				std::vector<unsigned char> privKey0;
+
+				if (key0000[0] == '5') {
+
+					DecodeBase58(key0000, privKey0);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 33, c);
+
+					if (c[0] != privKey0[33] || c[1] != privKey0[34] ||
+						c[2] != privKey0[35] || c[3] != privKey0[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+
+				if (key0000[0] == 'K' || key0000[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0000, privKey0);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 34, c);
+
+					if (c[0] != privKey0[34] || c[1] != privKey0[35] ||
+						c[2] != privKey0[36] || c[3] != privKey0[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+
+			}
+			if (thId == 10) {
+				int N = nbit;
+				char str[]{ "jkmnoVWXYZabcdefghirspqASTUtuvwxyz123BCDEFGHJKLMNPQR456789" };
+				int strN = 58;
+				char* pass = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass[i] = str[rand() % strN];
+				}
+				pass[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass << zez;
+				std::string priv0 = ss.str();
+
+				input1 = priv0;
+				char* key0000 = &priv0[0];
+				bool* compressed;
+				Int ret0000;
+				ret0000.SetInt32(0);
+				std::vector<unsigned char> privKey0;
+
+				if (key0000[0] == '5') {
+
+					DecodeBase58(key0000, privKey0);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 33, c);
+
+					if (c[0] != privKey0[33] || c[1] != privKey0[34] ||
+						c[2] != privKey0[35] || c[3] != privKey0[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+
+				if (key0000[0] == 'K' || key0000[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0000, privKey0);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 34, c);
+
+					if (c[0] != privKey0[34] || c[1] != privKey0[35] ||
+						c[2] != privKey0[36] || c[3] != privKey0[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+
+			}
+
+			if (thId == 11) {
+				int N = nbit;
+				char str[]{ "DEtuvFGHs56UVxyz12mnoLMNAB34JKCWXYZwPQRSTabcdefghijkpqr789" };
+				int strN = 58;
+				char* pass = new char[N + 1];
+				for (int i = 0; i < N; i++)
+				{
+					pass[i] = str[rand() % strN];
+				}
+				pass[N] = 0;
+
+				std::stringstream ss;
+				ss << seed << pass << zez;
+				std::string priv0 = ss.str();
+
+				input1 = priv0;
+				char* key0000 = &priv0[0];
+				bool* compressed;
+				Int ret0000;
+				ret0000.SetInt32(0);
+				std::vector<unsigned char> privKey0;
+
+				if (key0000[0] == '5') {
+
+					DecodeBase58(key0000, privKey0);
+
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 33, c);
+
+					if (c[0] != privKey0[33] || c[1] != privKey0[34] ||
+						c[2] != privKey0[35] || c[3] != privKey0[36]) {
+						counters[thId] += 1;
+					}
+					else {
+
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+					}
+				}
+
+				if (key0000[0] == 'K' || key0000[0] == 'L') {
+
+					// Compressed
+					DecodeBase58(key0000, privKey0);
+					int count = 31;
+					for (int i = 1; i < 33; i++)
+						ret0000.SetByte(count--, privKey0[i]);
+
+					// Compute checksum
+					unsigned char c[4];
+					sha256_checksum(privKey0.data(), 34, c);
+
+					if (c[0] != privKey0[34] || c[1] != privKey0[35] ||
+						c[2] != privKey0[36] || c[3] != privKey0[37]) {
+						counters[thId] += 1;
+					}
+					else {
+						key = ret0000;
+						kisa0.Set(&key);
+						input1 = priv0;
+						input2 = key;
+						printf("\n  Valid WIF: %s \n", priv0.c_str());
+						startP = secp->ComputePublicKey(&key);
+						int i = 0;
+						if (coinType == COIN_BTC) {
+							switch (compMode) {
+							case SEARCH_COMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_UNCOMPRESSED:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							case SEARCH_BOTH:
+								switch (searchMode) {
+								case (int)SEARCH_MODE_MA:
+									checkMultiAddresses(true, key, i, startP);
+									checkMultiAddresses(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SA:
+									checkSingleAddress(true, key, i, startP);
+									checkSingleAddress(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_MX:
+									checkMultiXPoints(true, key, i, startP);
+									checkMultiXPoints(false, key, i, startP);
+									break;
+								case (int)SEARCH_MODE_SX:
+									checkSingleXPoint(true, key, i, startP);
+									checkSingleXPoint(false, key, i, startP);
+									break;
+								default:
+									break;
+								}
+								break;
+							}
+						}
+						else {
+							switch (searchMode) {
+							case (int)SEARCH_MODE_MA:
+								checkMultiAddressesETH(key, i, startP);
+								break;
+							case (int)SEARCH_MODE_SA:
+								checkSingleAddressETH(key, i, startP);
+								break;
+							default:
+								break;
+							}
+						}
+						counters2 += 1;
+
+					}
+				}
+
+			}
+		}
+	}
+
+
 }
 
 // ----------------------------------------------------------------------------
 
 void Fialka::getGPUStartingKeys(Int & tRangeStart, Int & tRangeEnd, int groupSize, int nbThread, Int * keys, Point * p)
 {
+	printf("  Rotor GPU    : The GPU is under development! Use the mode in the old version of the program \n  Run: Fialka.exe -t 0 -g -i 0 -x 256,256 -r 8 -f test.bin``\n\n");
+	exit(1);
 	ifstream file7777("WIF.txt");
 	string s7777;
 	for (int i = 0; i < nbThread; i++) {
@@ -21164,7 +31420,7 @@ void Fialka::FindKeyGPU(TH_PARAM* ph)
 
 	}
 
-	//delete[] keys;
+	delete[] keys;
 	delete[] p;
 	delete g;
 
@@ -21691,7 +31947,7 @@ void Fialka::Search(int nbThread, std::vector<int> gpuId, std::vector<int> gridS
 
 			}
 		}
-		if (rekey == 7) {
+		if (rekey == 7 || rekey == 14) {
 
 			if (minuty == 300) {
 
@@ -22017,20 +32273,58 @@ void Fialka::Search(int nbThread, std::vector<int> gpuId, std::vector<int> gridS
 		avgGpuKeyRate /= (double)(nbSample);
 
 		zhdat++;
+		if (rekey == 0) {
+			double avgKeyRate2 = avgKeyRate * 1;
+			double avgKeyRate3 = avgKeyRate2 / nbGPUThread;
 
-		if (rekey == 1) {
+			input2.Add(avgKeyRate3);
+			//bool isComp;
+			bool compressed = (searchMode == SEARCH_COMPRESSED);
+			string pAddr = secp->GetPrivAddress(compressed, input2);
+
+
 			if (isAlive(params)) {
 				memset(timeStr, '\0', 256);
-				printf("\r  [%s] [%s] [%s] [CPU: %.2f Kk/s] [F: %d] [T: %s] [Skip: %s]   ",
+				printf("\r  [%s] [%s] [%s] [F: %d] [GPU: %.2f Mk/s] [T: %s]  ",
 					toTimeStr(t1, timeStr),
-					input1.c_str(),
+					pAddr.c_str(),
 					input2.GetBase16().c_str(),
-					avgKeyRate / 1000.0,
 					nbFoundKey,
-					formatThousands(count).c_str(),
-					formatThousands(counters2).c_str());
+					avgGpuKeyRate / 1000000.0,
+					formatThousands(count).c_str());
 			}
 		}
+		if (rekey == 1) {
+			
+			if (zez == "BIP") {
+				if (isAlive(params)) {
+					memset(timeStr, '\0', 256);
+					printf("\r  [%s] [F: %d] [BIP: %s] [Addresses: %s] [CPU: %.2f/s] [Skip: %s] [%s] ",
+						toTimeStr(t1, timeStr),
+						nbFoundKey,
+						formatThousands(akk).c_str(),
+						formatThousands(count).c_str(),
+						avgKeyRate / 1.0,
+						formatThousands(counters2).c_str(),
+						input1.c_str());
+				}
+			
+			}
+			else {
+				if (isAlive(params)) {
+					memset(timeStr, '\0', 256);
+					printf("\r  [%s] [%s] [%s] [CPU: %.2f Kk/s] [F: %d] [T: %s] [Skip: %s]   ",
+						toTimeStr(t1, timeStr),
+						input1.c_str(),
+						input2.GetBase16().c_str(),
+						avgKeyRate / 1000.0,
+						nbFoundKey,
+						formatThousands(count).c_str(),
+						formatThousands(counters2).c_str());
+				}
+			}
+		}
+
 		if (rekey == 2) {
 
 			if (isAlive(params)) {
@@ -22112,39 +32406,37 @@ void Fialka::Search(int nbThread, std::vector<int> gpuId, std::vector<int> gridS
 			}
 		}
 		if (rekey == 8) {
+
 			if (isAlive(params)) {
-				memset(timeStr, '\0', 256);
-				printf("\r  [%s] [%s] [%s] [CPU: %.2f Kk/s] [F: %d] [T: %s] ",
-					toTimeStr(t1, timeStr),
-					input1.c_str(),
-					input2.GetBase16().c_str(),
-					avgKeyRate / 1000.0,
-					nbFoundKey,
-					formatThousands(count).c_str());
+
+				uint64_t count3 = count - counters2;
+
+				if (avgKeyRate > 1000000) {
+					memset(timeStr, '\0', 256);
+					printf("\r  [%s] [%s] [%s] [CPU: %.2f Mk/s] [F: %d] [V: %s] [Skip: %s] ",
+						toTimeStr(t1, timeStr),
+						input1.c_str(),
+						input2.GetBase16().c_str(),
+						avgKeyRate / 1000000.0,
+						nbFoundKey,
+						formatThousands(count3).c_str(),
+						formatThousands(counters2).c_str());
+				}
+				else {
+
+					memset(timeStr, '\0', 256);
+					printf("\r  [%s] [%s] [%s] [CPU: %.2f Kk/s] [F: %d] [V: %s] [Skip: %s] ",
+						toTimeStr(t1, timeStr),
+						input1.c_str(),
+						input2.GetBase16().c_str(),
+						avgKeyRate / 1000.0,
+						nbFoundKey,
+						formatThousands(count3).c_str(),
+						formatThousands(counters2).c_str());
+				}
 			}
 		}
 
-		if (rekey == 9) {
-			double avgKeyRate2 = avgKeyRate * 1;
-			double avgKeyRate3 = avgKeyRate2 / nbGPUThread;
-
-			input2.Add(avgKeyRate3);
-			//bool isComp;
-			bool compressed = (searchMode == SEARCH_COMPRESSED);
-			string pAddr = secp->GetPrivAddress(compressed, input2);
-
-
-			if (isAlive(params)) {
-				memset(timeStr, '\0', 256);
-				printf("\r  [%s] [%s] [%s] [F: %d] [GPU: %.2f Mk/s] [T: %s]  ",
-					toTimeStr(t1, timeStr),
-					pAddr.c_str(),
-					input2.GetBase16().c_str(),
-					nbFoundKey,
-					avgGpuKeyRate / 1000000.0,
-					formatThousands(count).c_str());
-			}
-		}
 		if (rekey == 10) {
 			if (isAlive(params)) {
 				memset(timeStr, '\0', 256);
@@ -22169,9 +32461,104 @@ void Fialka::Search(int nbThread, std::vector<int> gpuId, std::vector<int> gridS
 					formatThousands(count).c_str());
 			}
 		}
+		if (rekey == 12) {
+			if (isAlive(params)) {
+				memset(timeStr, '\0', 256);
+				printf("\r  [%s] [%s] [%s] [CPU: %.2f Kk/s] [F: %d] [T: %s] ",
+					toTimeStr(t1, timeStr),
+					input1.c_str(),
+					input2.GetBase16().c_str(),
+					avgKeyRate / 1000.0,
+					nbFoundKey,
+					formatThousands(count).c_str());
+			}
+		}
+		if (rekey == 13) {
+			if (isAlive(params)) {
+				uint64_t count3 = count - counters2;
+				
+				if (avgKeyRate > 1000000) {
+					memset(timeStr, '\0', 256);
+					printf("\r  [%s] [%s] [%s] [CPU: %.2f Mk/s] [F: %d] [V: %s] [Skip: %s] ",
+						toTimeStr(t1, timeStr),
+						input1.c_str(),
+						input2.GetBase16().c_str(),
+						avgKeyRate / 1000000.0,
+						nbFoundKey,
+						formatThousands(count3).c_str(),
+						formatThousands(counters2).c_str());
+				}
+				else {
+
+					memset(timeStr, '\0', 256);
+					printf("\r  [%s] [%s] [%s] [CPU: %.2f Kk/s] [F: %d] [V: %s] [Skip: %s] ",
+						toTimeStr(t1, timeStr),
+						input1.c_str(),
+						input2.GetBase16().c_str(),
+						avgKeyRate / 1000.0,
+						nbFoundKey,
+						formatThousands(count3).c_str(),
+						formatThousands(counters2).c_str());
+				}
+				
+			}
+		}
+		if (rekey == 14) {
+			
+			if (isAlive(params)) {
+				if (avgKeyRate > 1000000) {
+					memset(timeStr, '\0', 256);
+					printf("\r  [%s] [%s] [CPU: %.2f Mk/s] [F: %d] [V: %s] [Skip: %s] ",
+						toTimeStr(t1, timeStr),
+						input1.c_str(),
+						avgKeyRate / 1000000.0,
+						nbFoundKey,
+						formatThousands(counters2).c_str(),
+						formatThousands(count).c_str());
+				}
+				else {
+
+					memset(timeStr, '\0', 256);
+					printf("\r  [%s] [%s] [CPU: %.2f Kk/s] [F: %d] [V: %s] [Skip: %s] ",
+						toTimeStr(t1, timeStr),
+						input1.c_str(),
+						avgKeyRate / 1000.0,
+						nbFoundKey,
+						formatThousands(counters2).c_str(),
+						formatThousands(count).c_str());
+				}
+
+			}
+		}
+		if (rekey == 15) {
+
+			if (isAlive(params)) {
+				if (avgKeyRate > 1000000) {
+					memset(timeStr, '\0', 256);
+					printf("\r  [%s] [%s] [CPU: %.2f Mk/s] [F: %d] [V: %s] [Skip: %s] ",
+						toTimeStr(t1, timeStr),
+						input1.c_str(),
+						avgKeyRate / 1000000.0,
+						nbFoundKey,
+						formatThousands(counters2).c_str(),
+						formatThousands(count).c_str());
+				}
+				else {
+
+					memset(timeStr, '\0', 256);
+					printf("\r  [%s] [%s] [CPU: %.2f Kk/s] [F: %d] [V: %s] [Skip: %s] ",
+						toTimeStr(t1, timeStr),
+						input1.c_str(),
+						avgKeyRate / 1000.0,
+						nbFoundKey,
+						formatThousands(counters2).c_str(),
+						formatThousands(count).c_str());
+				}
+
+			}
+		}
 		
-		
-		if (rKey > 0) {
+		if (rKey >= 0) {
 			if ((count - lastrKey) > (18000000000000000000 * rKey)) {
 				// rKey request
 				rKeyRequest(params);
