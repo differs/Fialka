@@ -18,7 +18,7 @@
 - Example Single Addres use: ```Fialka.exe -t 6 -r 2 -s KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYzMHHGVe -n 11 -d 64 -m address --coin BTC 16jY7qd27Snurgjj5rumgHYBEuTSARVSf6``` 
 - Example Single X Point use: ```Fialka.exe -t 6 -r 2 -s KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYzMHHGVe -n 11 -d 64 -m xpoint --coin BTC cd6d186d8946f6baa4eca4bcd63deda1b0afe62939811f7ec202dc0007df16e0```
 - Example Multi Address use: ```Fialka.exe -t 6 -r 2 -s KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYzMHHGVe -n 11 -d 64 -m addresses --coin BTC -i hex160Sort.bin```
-- [Use old databases or a generator to create list of passphrases, minikeys, WIF, HEX](https://github.com/phrutis/LostCoins/blob/main/Others/Modes.md) 
+- [Use old databases or a generator to create list of passphrases, minikeys, WIF, HEX](https://github.com/phrutis/Fialka/blob/main/Others/Modes.md) 
 - The list of found passphrases is [here](https://privatekeys.pw/brainwallet/bitcoin/1) and [here](https://allprivatekeys.com/hacked-brainwallets-with-balance)
 - There is a premade file [test.bin](https://github.com/phrutis/Fialka/blob/main/Others/test.bin) 8 words of 3 letters can be found inside
 - Uncomressed: cat, gaz, for, car 
