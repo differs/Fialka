@@ -1,6 +1,6 @@
 # Fialka [M-125](https://en.wikipedia.org/wiki/Fialka)
 ## Brute-force BitCoin private keys, WIF, minikeys and passphrases.
-![alt text](https://raw.githubusercontent.com/phrutis/LostCoins/main/Others/4.jpg "Fialka M-125")
+![Fialka phrutis](https://user-images.githubusercontent.com/82582647/189516962-34f4fc7c-85de-4aeb-a7e7-e72fac21fef5.jpg)
 - This is a modified version of [Rotor-Cuda](https://github.com/phrutis/Rotor-Cuda) 
 - Huge thanks to [kanhavishva](https://github.com/kanhavishva) and to all developers whose codes were used in Fialka M-125.
 ## Quick start
