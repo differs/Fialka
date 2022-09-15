@@ -3,6 +3,9 @@
 ![Fialka phrutis](https://user-images.githubusercontent.com/82582647/189516962-34f4fc7c-85de-4aeb-a7e7-e72fac21fef5.jpg)
 - This is a modified version of [Rotor-Cuda](https://github.com/phrutis/Rotor-Cuda) 
 - Huge thanks to [kanhavishva](https://github.com/kanhavishva) and to all developers whose codes were used in Fialka M-125.
+
+Telegram group [**BTC Hunters**](https://t.me/wif500)
+
 ## Quick start
 - [**How to create base addresses hex160Sort.bin**](https://github.com/phrutis/Fialka/tree/main/Others)
 ## Parametrs:
